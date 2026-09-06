@@ -1,15 +1,41 @@
-// Game resolver route for Where's the Game
 import express from "express";
+
 import { resolveGame } from "../logic/resolver.js";
+import { lookupDirectvGame } from "../logic/directvGuide.js";
 
 const router = express.Router();
 
 const SPORTS = {
-  nfl: { sport: "football", league: "nfl", label: "NFL" },
-  ncaaf: { sport: "football", league: "college-football", label: "NCAA Football" },
-  mlb: { sport: "baseball", league: "mlb", label: "MLB" },
-  nhl: { sport: "hockey", league: "nhl", label: "NHL" },
-  nba: { sport: "basketball", league: "nba", label: "NBA" },
+  nfl: {
+    sport: "football",
+    league: "nfl",
+    label: "NFL"
+  },
+
+  ncaaf: {
+    sport: "football",
+    league: "college-football",
+    label: "NCAA Football"
+  },
+
+  mlb: {
+    sport: "baseball",
+    league: "mlb",
+    label: "MLB"
+  },
+
+  nhl: {
+    sport: "hockey",
+    league: "nhl",
+    label: "NHL"
+  },
+
+  nba: {
+    sport: "basketball",
+    league: "nba",
+    label: "NBA"
+  },
+
   ncaab: {
     sport: "basketball",
     league: "mens-college-basketball",
@@ -17,81 +43,245 @@ const SPORTS = {
   }
 };
 
-function yyyymmdd(date = new Date()) {
-  return date.toISOString().slice(0, 10).replaceAll("-", "");
+function normalizeDate(value) {
+  if (!value) {
+    return new Date()
+      .toISOString()
+      .slice(0, 10)
+      .replaceAll("-", "");
+  }
+
+  return String(value)
+    .replaceAll("-", "")
+    .trim();
 }
 
-async function fetchGames(sportKey, date) {
-  const config = SPORTS[sportKey];
+function getBroadcast(competition) {
+  const broadcasts =
+    competition?.broadcasts ?? [];
+
+  const names = broadcasts
+    .flatMap(
+      (broadcast) =>
+        broadcast?.names ?? []
+    )
+    .filter(Boolean);
+
+  return [...new Set(names)].join(", ");
+}
+
+function normalizeEvent(
+  event,
+  sportLabel
+) {
+  const competition =
+    event?.competitions?.[0];
+
+  const competitors =
+    competition?.competitors ?? [];
+
+  const homeTeam =
+    competitors.find(
+      (team) =>
+        team.homeAway === "home"
+    );
+
+  const awayTeam =
+    competitors.find(
+      (team) =>
+        team.homeAway === "away"
+    );
+
+  return {
+    id: event?.id ?? null,
+
+    sport: sportLabel,
+
+    name:
+      event?.name ??
+      null,
+
+    away:
+      awayTeam?.team
+        ?.displayName ??
+      "Away",
+
+    home:
+      homeTeam?.team
+        ?.displayName ??
+      "Home",
+
+    startTime:
+      event?.date ??
+      null,
+
+    status:
+      event?.status?.type
+        ?.description ??
+      null,
+
+    network:
+      getBroadcast(
+        competition
+      ),
+
+    venue:
+      competition?.venue
+        ?.fullName ??
+      null
+  };
+}
+
+async function addDirectvGuideData(
+  game,
+  sportKey
+) {
+  /*
+   * For now we only perform live
+   * DIRECTV package lookup for MLB.
+   *
+   * We will extend this same system
+   * to NHL Center Ice and NBA League Pass.
+   */
+  if (sportKey !== "mlb") {
+    return game;
+  }
+
+  try {
+    const directvGuide =
+      await lookupDirectvGame({
+        sport: "mlb",
+        away: game.away,
+        home: game.home,
+        zip: "15220"
+      });
+
+    return {
+      ...game,
+      directvGuide
+    };
+  } catch (error) {
+    console.error(
+      "DIRECTV game lookup error:",
+      error
+    );
+
+    return {
+      ...game,
+      directvGuide: null
+    };
+  }
+}
+
+router.get("/", async (req, res) => {
+  const sportKey =
+    String(
+      req.query.sport ?? "mlb"
+    )
+      .toLowerCase()
+      .trim();
+
+  const config =
+    SPORTS[sportKey];
+
+  if (!config) {
+    return res.status(400).json({
+      status: "error",
+      message:
+        "Unsupported sport"
+    });
+  }
+
+  const date =
+    normalizeDate(
+      req.query.date
+    );
+
+  const providerKey =
+    String(
+      req.query.provider ??
+      "directv"
+    )
+      .toLowerCase()
+      .trim();
 
   const url =
     `https://site.api.espn.com/apis/site/v2/sports/` +
-    `${config.sport}/${config.league}/scoreboard?dates=${date}`;
+    `${config.sport}/` +
+    `${config.league}/scoreboard` +
+    `?dates=${date}`;
 
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    throw new Error(`Sports request failed: ${response.status}`);
-  }
-
-  const data = await response.json();
-
-  return (data.events ?? []).map((event) => {
-    const competition = event.competitions?.[0] ?? {};
-    const competitors = competition.competitors ?? [];
-
-    const home = competitors.find((team) => team.homeAway === "home");
-    const away = competitors.find((team) => team.homeAway === "away");
-
-    const networks = (competition.broadcasts ?? [])
-      .flatMap((broadcast) => broadcast.names ?? []);
-
-    return {
-      id: event.id,
-      sport: config.label,
-      name: event.name,
-      away: away?.team?.displayName ?? null,
-      home: home?.team?.displayName ?? null,
-      startTime: event.date ?? null,
-      status: event.status?.type?.description ?? null,
-      network: [...new Set(networks)].join(", ") || null,
-      venue: competition.venue?.fullName ?? null
-    };
-  });
-}
-
-// GET /resolve?sport=mlb
-router.get("/", async (req, res) => {
   try {
-    const sport = String(req.query.sport ?? "mlb").toLowerCase();
-    const date = /^\d{8}$/.test(req.query.date ?? "")
-      ? req.query.date
-      : yyyymmdd();
+    const response =
+      await fetch(url);
 
-    if (!SPORTS[sport]) {
-      return res.status(400).json({
-        status: "error",
-        message: `Unknown sport '${sport}'`,
-        supportedSports: Object.keys(SPORTS)
-      });
+    if (!response.ok) {
+      throw new Error(
+        `ESPN request failed: ${response.status}`
+      );
     }
 
-    const games = await fetchGames(sport, date);
-    const resolvedGames = games.map(resolveGame);
+    const data =
+      await response.json();
 
-    res.json({
+    const baseGames =
+      (data.events ?? [])
+        .map((event) =>
+          normalizeEvent(
+            event,
+            config.label
+          )
+        );
+
+    /*
+     * Resolve normal network/provider data first.
+     */
+    const resolvedGames =
+      baseGames.map(
+        (game) =>
+          resolveGame(
+            game,
+            providerKey
+          )
+      );
+
+    /*
+     * Then attach exact DIRECTV
+     * Extra Innings guide data.
+     *
+     * Promise.all lets the guide
+     * lookups happen together.
+     */
+    const games =
+      await Promise.all(
+        resolvedGames.map(
+          (game) =>
+            addDirectvGuideData(
+              game,
+              sportKey
+            )
+        )
+      );
+
+    return res.json({
       status: "ok",
+      sport: sportKey,
       date,
-      sport: SPORTS[sport].label,
-      count: resolvedGames.length,
-      games: resolvedGames
+      provider: providerKey,
+      count: games.length,
+      games
     });
-  } catch (error) {
-    console.error("/resolve error:", error);
 
-    res.status(500).json({
+  } catch (error) {
+    console.error(
+      "Resolve route error:",
+      error
+    );
+
+    return res.status(500).json({
       status: "error",
-      message: "Failed to resolve games"
+      message:
+        "Could not resolve games"
     });
   }
 });
