@@ -73,3 +73,6 @@ export function resolveGame(game) {
     directv: resolveNetwork(game.network)
   };
 }
+"SportsNet Pittsburgh": "659",
+"SportsNet Pittsburgh HD": "659",
+"AT&T SportsNet Pittsburgh": "659",
