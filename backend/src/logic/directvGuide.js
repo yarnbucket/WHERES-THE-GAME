@@ -1,98 +1,213 @@
 // DIRECTV live sports guide lookup
 // Where's the Game
-//
-// Pulls DIRECTV's current sports schedule and
-// tries to match a specific game to its listed channel(s).
 
 const DIRECTV_SPORT_IDS = {
   mlb: "61"
 };
 
-function normalizeTeamName(value) {
-  return String(value ?? "")
-    .toLowerCase()
-    .replace(/\bthe\b/g, "")
-    .replace(/[^a-z0-9 ]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function stripHtml(value) {
+function cleanText(value) {
   return String(value ?? "")
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<[^>]+>/g, " ")
     .replace(/&nbsp;/gi, " ")
     .replace(/&amp;/gi, "&")
+    .replace(/&#39;/gi, "'")
+    .replace(/&quot;/gi, "\"")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-function extractChannels(text) {
-  const results = [];
+function normalize(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/\bla\b/g, "los angeles")
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getUsefulTeamTerms(teamName) {
+  const words = normalize(teamName)
+    .split(" ")
+    .filter(Boolean);
+
+  if (words.length === 0) {
+    return [];
+  }
+
+  const terms = [];
+
+  // Full team name
+  terms.push(words.join(" "));
+
+  // Nickname
+  terms.push(words[words.length - 1]);
+
+  // City / location portion
+  if (words.length > 1) {
+    terms.push(
+      words.slice(0, -1).join(" ")
+    );
+  }
+
+  return [...new Set(terms)]
+    .filter(
+      (term) =>
+        term.length >= 3
+    );
+}
+
+function findTeamIndex(text, teamName) {
+  const normalizedText =
+    normalize(text);
+
+  const terms =
+    getUsefulTeamTerms(teamName);
+
+  for (const term of terms) {
+    const index =
+      normalizedText.indexOf(term);
+
+    if (index >= 0) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+function extractChannels(section) {
+  const channels = [];
 
   const regex =
     /Channel\s+(\d+(?:-\d+)?)\s*(HD)?(?:\s*\[([^\]]+)\])?/gi;
 
   let match;
 
-  while ((match = regex.exec(text)) !== null) {
-    results.push({
-      channel: match[1],
-      hd: Boolean(match[2]),
-      feed: match[3]?.trim() ?? null
-    });
+  while (
+    (match = regex.exec(section)) !== null
+  ) {
+    const channel = match[1];
+
+    // MLB Extra Innings game channels.
+    const number =
+      Number(
+        channel.split("-")[0]
+      );
+
+    if (
+      number < 719 ||
+      number > 749
+    ) {
+      continue;
+    }
+
+    if (
+      !channels.some(
+        (item) =>
+          item.channel === channel
+      )
+    ) {
+      channels.push({
+        channel,
+        hd: Boolean(match[2]),
+        feed:
+          match[3]?.trim() ??
+          null
+      });
+    }
   }
 
-  return results;
+  return channels;
 }
 
-function scoreGameMatch(text, away, home) {
-  const cleanText = normalizeTeamName(text);
-  const cleanAway = normalizeTeamName(away);
-  const cleanHome = normalizeTeamName(home);
+function findGameSection(
+  fullText,
+  away,
+  home
+) {
+  const normalizedText =
+    normalize(fullText);
 
-  let score = 0;
+  const awayTerms =
+    getUsefulTeamTerms(away);
 
-  if (
-    cleanAway &&
-    cleanText.includes(cleanAway)
-  ) {
-    score += 2;
+  const homeTerms =
+    getUsefulTeamTerms(home);
+
+  let bestIndex = -1;
+
+  for (const awayTerm of awayTerms) {
+    const awayIndex =
+      normalizedText.indexOf(
+        awayTerm
+      );
+
+    if (awayIndex < 0) {
+      continue;
+    }
+
+    for (const homeTerm of homeTerms) {
+      const homeIndex =
+        normalizedText.indexOf(
+          homeTerm,
+          awayIndex
+        );
+
+      if (
+        homeIndex >= 0 &&
+        homeIndex - awayIndex < 250
+      ) {
+        bestIndex =
+          awayIndex;
+
+        break;
+      }
+    }
+
+    if (bestIndex >= 0) {
+      break;
+    }
   }
 
-  if (
-    cleanHome &&
-    cleanText.includes(cleanHome)
-  ) {
-    score += 2;
+  if (bestIndex < 0) {
+    const awayIndex =
+      findTeamIndex(
+        fullText,
+        away
+      );
+
+    const homeIndex =
+      findTeamIndex(
+        fullText,
+        home
+      );
+
+    if (
+      awayIndex >= 0 &&
+      homeIndex >= 0
+    ) {
+      bestIndex =
+        Math.min(
+          awayIndex,
+          homeIndex
+        );
+    }
   }
 
-  // Also try the last word, usually team nickname/city.
-  const awayWords = cleanAway.split(" ");
-  const homeWords = cleanHome.split(" ");
-
-  const awayLast =
-    awayWords[awayWords.length - 1];
-
-  const homeLast =
-    homeWords[homeWords.length - 1];
-
-  if (
-    awayLast &&
-    cleanText.includes(awayLast)
-  ) {
-    score += 1;
+  if (bestIndex < 0) {
+    return null;
   }
 
-  if (
-    homeLast &&
-    cleanText.includes(homeLast)
-  ) {
-    score += 1;
-  }
-
-  return score;
+  /*
+   * DIRECTV usually lists the channels
+   * immediately after the matchup.
+   */
+  return normalizedText.slice(
+    Math.max(0, bestIndex - 100),
+    bestIndex + 700
+  );
 }
 
 export async function lookupDirectvGame({
@@ -101,10 +216,13 @@ export async function lookupDirectvGame({
   home,
   zip = "15220"
 }) {
+  const sportKey =
+    String(sport ?? "")
+      .toLowerCase()
+      .trim();
+
   const sportId =
-    DIRECTV_SPORT_IDS[
-      String(sport ?? "").toLowerCase()
-    ];
+    DIRECTV_SPORT_IDS[sportKey];
 
   if (!sportId) {
     return null;
@@ -112,16 +230,18 @@ export async function lookupDirectvGame({
 
   const url =
     "https://sports.directv.com/local_schedule.htm" +
-    `?Submit=View&Zip=${encodeURIComponent(zip)}` +
+    `?Submit=View` +
+    `&Zip=${encodeURIComponent(zip)}` +
     `&sport=${encodeURIComponent(sportId)}`;
 
   try {
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 Where's-the-Game"
-      }
-    });
+    const response =
+      await fetch(url, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0"
+        }
+      });
 
     if (!response.ok) {
       throw new Error(
@@ -132,111 +252,31 @@ export async function lookupDirectvGame({
     const html =
       await response.text();
 
-    /*
-     * DIRECTV's schedule is HTML, not JSON.
-     * Split around common date/game boundaries so
-     * we can evaluate smaller chunks.
-     */
-    const chunks =
-      html.split(
-        /(?:<tr\b|<\/tr>|<br\s*\/?>)/i
+    const fullText =
+      cleanText(html);
+
+    const section =
+      findGameSection(
+        fullText,
+        away,
+        home
       );
 
-    let best = null;
+    if (!section) {
+      console.log(
+        `DIRECTV: matchup not found: ${away} @ ${home}`
+      );
 
-    for (const chunk of chunks) {
-      const text = stripHtml(chunk);
-
-      if (!text) {
-        continue;
-      }
-
-      const score =
-        scoreGameMatch(
-          text,
-          away,
-          home
-        );
-
-      if (score < 2) {
-        continue;
-      }
-
-      const channels =
-        extractChannels(text);
-
-      if (channels.length === 0) {
-        continue;
-      }
-
-      if (
-        !best ||
-        score > best.score
-      ) {
-        best = {
-          score,
-          text,
-          channels
-        };
-      }
+      return null;
     }
 
-    if (!best) {
-      /*
-       * Fallback:
-       * search the full page around the matchup.
-       */
-      const fullText = stripHtml(html);
+    const channels =
+      extractChannels(section);
 
-      const awayNormalized =
-        normalizeTeamName(away);
-
-      const homeNormalized =
-        normalizeTeamName(home);
-
-      const lower =
-        fullText.toLowerCase();
-
-      let index = -1;
-
-      if (awayNormalized) {
-        index =
-          lower.indexOf(
-            awayNormalized
-          );
-      }
-
-      if (
-        index < 0 &&
-        homeNormalized
-      ) {
-        index =
-          lower.indexOf(
-            homeNormalized
-          );
-      }
-
-      if (index >= 0) {
-        const section =
-          fullText.slice(
-            Math.max(0, index - 150),
-            index + 700
-          );
-
-        const channels =
-          extractChannels(section);
-
-        if (channels.length > 0) {
-          return {
-            provider: "DIRECTV",
-            package:
-              "MLB Extra Innings",
-            channels,
-            source:
-              "DIRECTV Sports Guide"
-          };
-        }
-      }
+    if (channels.length === 0) {
+      console.log(
+        `DIRECTV: matchup found but no Extra Innings channel: ${away} @ ${home}`
+      );
 
       return null;
     }
@@ -245,7 +285,7 @@ export async function lookupDirectvGame({
       provider: "DIRECTV",
       package:
         "MLB Extra Innings",
-      channels: best.channels,
+      channels,
       source:
         "DIRECTV Sports Guide"
     };
