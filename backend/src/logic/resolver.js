@@ -59,69 +59,85 @@ const STREAMING_SOURCES = {
     type: "streaming",
     note: "ACC Network Extra"
   },
+
   "ACC Network Extra": {
     service: "ESPN",
     type: "streaming",
     note: "ACC Network Extra"
   },
+
   "SEC Network+": {
     service: "ESPN",
     type: "streaming",
     note: "SEC Network+"
   },
+
   SECN+: {
     service: "ESPN",
     type: "streaming",
     note: "SEC Network+"
   },
+
   "ESPN+": {
     service: "ESPN+",
     type: "streaming"
   },
+
   "ESPN Plus": {
     service: "ESPN+",
     type: "streaming"
   },
+
   Peacock: {
     service: "Peacock",
     type: "streaming"
   },
+
   "Prime Video": {
     service: "Prime Video",
     type: "streaming"
   },
+
   Amazon: {
     service: "Prime Video",
     type: "streaming"
   },
+
   Netflix: {
     service: "Netflix",
     type: "streaming"
   },
+
   "Apple TV+": {
     service: "Apple TV+",
     type: "streaming"
   },
+
   AppleTV: {
     service: "Apple TV+",
     type: "streaming"
   },
+
   "Apple TV": {
     service: "Apple TV+",
     type: "streaming"
   },
+
   Hulu: {
     service: "Hulu",
     type: "streaming"
   },
+
   "MLB.TV": {
     service: "MLB.TV",
     type: "streaming"
   },
+
   "NBA League Pass": {
     service: "NBA League Pass",
     type: "streaming"
   },
+
   "NHL Power Play": {
     service: "ESPN+",
     type: "streaming"
@@ -217,12 +233,18 @@ export function resolveSource(source) {
     };
   }
 
-  // Common team-branded streaming feeds
+  // Team-branded regional sports feeds
+  // Examples: Reds.TV, Brewers.TV, Padres.TV, Rockies.TV
   if (/\.TV$/i.test(cleanSource)) {
     return {
       source: cleanSource,
+      network: cleanSource,
       service: cleanSource,
-      type: "streaming"
+      directvChannel: null,
+      type: "regional",
+      streaming: true,
+      note:
+        "Regional TV / streaming service; DIRECTV availability varies by market"
     };
   }
 
@@ -230,7 +252,8 @@ export function resolveSource(source) {
     source: cleanSource,
     type: "unknown",
     directvChannel: null,
-    note: "Source recognized from schedule but not yet mapped"
+    note:
+      "Source recognized from schedule but not yet mapped"
   };
 }
 
@@ -273,7 +296,9 @@ export function resolveGame(game) {
   );
 
   const streaming = sources.filter(
-    (item) => item.type === "streaming"
+    (item) =>
+      item.type === "streaming" ||
+      item.streaming === true
   );
 
   return {
@@ -287,10 +312,10 @@ export function resolveGame(game) {
     venue: game.venue ?? null,
     broadcast: game.network ?? null,
 
-    // Keep this for the current frontend
+    // Kept for compatibility with current frontend
     directv,
 
-    // New master source data
+    // Master source data
     sources,
     streaming
   };
