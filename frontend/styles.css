@@ -1,0 +1,357 @@
+:root {
+  --bg: #f4f7fb;
+  --panel: #ffffff;
+  --text: #0f1b3d;
+  --muted: #68738c;
+  --line: #dfe6f1;
+  --blue: #0d5ce5;
+  --blue-soft: #eaf3ff;
+  --shadow: 0 8px 22px rgba(18, 38, 72, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  padding-bottom: 86px;
+}
+
+button {
+  font: inherit;
+}
+
+.app-shell {
+  width: min(100%, 760px);
+  margin: 0 auto;
+  padding: 18px 16px 28px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: var(--blue);
+  color: white;
+  font-size: 30px;
+  box-shadow: var(--shadow);
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 0.9;
+  font-style: italic;
+  letter-spacing: -0.8px;
+}
+
+.brand p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.icon-button {
+  width: 46px;
+  height: 46px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  font-size: 25px;
+  cursor: pointer;
+}
+
+.sport-tabs {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  background: #e9edf4;
+  padding: 4px;
+  border-radius: 16px;
+  overflow-x: auto;
+  margin-bottom: 18px;
+}
+
+.sport-tabs button {
+  min-width: 72px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #3f4a63;
+  padding: 13px 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sport-tabs button.active {
+  background: var(--blue);
+  color: #fff;
+  box-shadow: 0 5px 14px rgba(13, 92, 229, 0.25);
+}
+
+.date-row {
+  display: grid;
+  grid-template-columns: 46px 1fr 46px auto;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.date-arrow,
+.today-button {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 13px;
+  height: 46px;
+  cursor: pointer;
+}
+
+.date-arrow {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.today-button {
+  padding: 0 18px;
+  color: var(--blue);
+  font-weight: 700;
+  background: var(--blue-soft);
+  border-color: #c9ddff;
+}
+
+.date-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+}
+
+.schedule-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: end;
+  margin-bottom: 10px;
+}
+
+.schedule-heading h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.schedule-heading span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.status-message {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  padding: 18px;
+  text-align: center;
+  color: var(--muted);
+  box-shadow: var(--shadow);
+}
+
+.games-list {
+  display: grid;
+  gap: 12px;
+}
+
+.game-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  gap: 14px;
+  padding: 15px;
+  border-radius: 18px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.game-main {
+  min-width: 0;
+}
+
+.game-sport {
+  display: inline-block;
+  margin-bottom: 6px;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+}
+
+.game-name {
+  margin: 0 0 8px;
+  font-size: 19px;
+  line-height: 1.15;
+}
+
+.game-time {
+  margin: 0 0 5px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.game-network,
+.game-venue {
+  margin: 4px 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.directv-box {
+  align-self: stretch;
+  border-radius: 15px;
+  padding: 12px 10px;
+  background: linear-gradient(180deg, #eef6ff, #e5f0ff);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 108px;
+}
+
+.directv-label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.directv-channel {
+  margin-top: 5px;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.directv-note {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.25;
+  color: var(--muted);
+}
+
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  background: rgba(255, 255, 255, 0.96);
+  border-top: 1px solid var(--line);
+  backdrop-filter: blur(12px);
+}
+
+.bottom-nav button {
+  border: 0;
+  background: transparent;
+  min-height: 70px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: center;
+  justify-content: center;
+  color: #59647a;
+  cursor: pointer;
+}
+
+.bottom-nav button span {
+  font-size: 22px;
+}
+
+.bottom-nav button small {
+  font-size: 11px;
+}
+
+.bottom-nav button.active {
+  color: var(--blue);
+}
+
+@media (max-width: 560px) {
+  .app-shell {
+    padding: 14px 10px 24px;
+  }
+
+  .brand-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 25px;
+  }
+
+  .brand h1 {
+    font-size: 21px;
+  }
+
+  .brand p {
+    display: none;
+  }
+
+  .sport-tabs {
+    grid-template-columns: repeat(6, minmax(70px, 1fr));
+  }
+
+  .date-row {
+    grid-template-columns: 42px 1fr 42px;
+  }
+
+  .today-button {
+    grid-column: 1 / -1;
+  }
+
+  .game-card {
+    grid-template-columns: 1fr 118px;
+    padding: 13px;
+  }
+
+  .game-name {
+    font-size: 17px;
+  }
+
+  .directv-channel {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 390px) {
+  .game-card {
+    grid-template-columns: 1fr;
+  }
+
+  .directv-box {
+    min-height: 78px;
+  }
+}

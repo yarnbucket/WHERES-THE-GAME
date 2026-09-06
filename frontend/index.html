@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Where's the Game?</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon">📺</div>
+        <div>
+          <h1>WHERE'S<br />THE GAME?</h1>
+          <p>Find the game. Watch the game.</p>
+        </div>
+      </div>
+
+      <button class="icon-button" aria-label="Settings">⚙️</button>
+    </header>
+
+    <nav class="sport-tabs" aria-label="Sports">
+      <button data-sport="nfl">NFL</button>
+      <button data-sport="ncaaf">NCAAF</button>
+      <button data-sport="mlb" class="active">MLB</button>
+      <button data-sport="nhl">NHL</button>
+      <button data-sport="nba">NBA</button>
+      <button data-sport="ncaab">NCAAB</button>
+    </nav>
+
+    <section class="date-row">
+      <button id="previousDay" class="date-arrow" aria-label="Previous day">‹</button>
+
+      <div class="date-center">
+        <span class="calendar-icon">📅</span>
+        <strong id="dateLabel">Today</strong>
+      </div>
+
+      <button id="nextDay" class="date-arrow" aria-label="Next day">›</button>
+
+      <button id="todayButton" class="today-button">Today</button>
+    </section>
+
+    <section class="schedule-heading">
+      <h2 id="scheduleTitle">MLB Games</h2>
+      <span id="timezoneLabel">Times shown in ET</span>
+    </section>
+
+    <section id="statusMessage" class="status-message">
+      Loading games...
+    </section>
+
+    <section id="gamesList" class="games-list"></section>
+  </main>
+
+  <nav class="bottom-nav">
+    <button class="active">
+      <span>🏠</span>
+      <small>Today</small>
+    </button>
+
+    <button>
+      <span>☆</span>
+      <small>Favorites</small>
+    </button>
+
+    <button>
+      <span>☷</span>
+      <small>All Games</small>
+    </button>
+
+    <button>
+      <span>⌕</span>
+      <small>Search</small>
+    </button>
+
+    <button>
+      <span>⚙</span>
+      <small>Settings</small>
+    </button>
+  </nav>
+
+  <script src="app.js"></script>
+</body>
+</html>
