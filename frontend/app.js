@@ -88,7 +88,8 @@ function toggleFavorite(game) {
           game.broadcast ??
           game.network ??
           null,
-        directv: game.directv ?? []
+        directv: game.directv ?? [],
+        directvGuide: game.directvGuide ?? null
       }
     ]);
   }
@@ -152,6 +153,7 @@ function getDirectvDisplay(game) {
     ? game.directv
     : [];
 
+  // 1. Normal national DIRECTV channel
   const national = options.find(
     (item) =>
       item.directvChannel &&
@@ -165,6 +167,7 @@ function getDirectvDisplay(game) {
     };
   }
 
+  // 2. Local DIRECTV channel
   const local = options.find(
     (item) =>
       item.directvChannel &&
@@ -182,6 +185,7 @@ function getDirectvDisplay(game) {
     };
   }
 
+  // 3. Regional DIRECTV channel
   const regional = options.find(
     (item) =>
       item.directvChannel &&
@@ -195,6 +199,30 @@ function getDirectvDisplay(game) {
     };
   }
 
+  // 4. Exact DIRECTV Sports Guide / Extra Innings channel
+  const guideChannels = game.directvGuide?.channels;
+
+  if (
+    Array.isArray(guideChannels) &&
+    guideChannels.length > 0
+  ) {
+    const first = guideChannels[0];
+
+    const channelLabel =
+      `${first.channel}${first.hd ? " HD" : ""}`;
+
+    const feedLabel =
+      first.feed ??
+      game.directvGuide?.package ??
+      "DIRECTV Sports Guide";
+
+    return {
+      channel: channelLabel,
+      note: feedLabel
+    };
+  }
+
+  // 5. Generic provider result
   if (options.length > 0) {
     return {
       channel: "--",
