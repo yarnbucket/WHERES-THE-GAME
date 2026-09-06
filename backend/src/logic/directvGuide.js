@@ -5,7 +5,7 @@ const DIRECTV_SPORT_IDS = {
   mlb: "61"
 };
 
-function cleanText(value) {
+function cleanHtml(value) {
   return String(value ?? "")
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
@@ -21,193 +21,42 @@ function cleanText(value) {
 function normalize(value) {
   return String(value ?? "")
     .toLowerCase()
-    .replace(/\bla\b/g, "los angeles")
     .replace(/[^a-z0-9 ]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-function getUsefulTeamTerms(teamName) {
-  const words = normalize(teamName)
-    .split(" ")
-    .filter(Boolean);
-
-  if (words.length === 0) {
-    return [];
-  }
-
-  const terms = [];
-
-  // Full team name
-  terms.push(words.join(" "));
-
-  // Nickname
-  terms.push(words[words.length - 1]);
-
-  // City / location portion
-  if (words.length > 1) {
-    terms.push(
-      words.slice(0, -1).join(" ")
-    );
-  }
-
-  return [...new Set(terms)]
-    .filter(
-      (term) =>
-        term.length >= 3
-    );
-}
-
-function findTeamIndex(text, teamName) {
-  const normalizedText =
-    normalize(text);
-
-  const terms =
-    getUsefulTeamTerms(teamName);
-
-  for (const term of terms) {
-    const index =
-      normalizedText.indexOf(term);
-
-    if (index >= 0) {
-      return index;
-    }
-  }
-
-  return -1;
-}
-
 function extractChannels(section) {
-  const channels = [];
+  const results = [];
 
   const regex =
     /Channel\s+(\d+(?:-\d+)?)\s*(HD)?(?:\s*\[([^\]]+)\])?/gi;
 
   let match;
 
-  while (
-    (match = regex.exec(section)) !== null
-  ) {
+  while ((match = regex.exec(section)) !== null) {
     const channel = match[1];
+    const baseNumber = Number(channel.split("-")[0]);
 
-    // MLB Extra Innings game channels.
-    const number =
-      Number(
-        channel.split("-")[0]
-      );
-
-    if (
-      number < 719 ||
-      number > 749
-    ) {
+    // MLB Extra Innings game channels
+    if (baseNumber < 721 || baseNumber > 749) {
       continue;
     }
 
     if (
-      !channels.some(
-        (item) =>
-          item.channel === channel
+      !results.some(
+        (item) => item.channel === channel
       )
     ) {
-      channels.push({
+      results.push({
         channel,
         hd: Boolean(match[2]),
-        feed:
-          match[3]?.trim() ??
-          null
+        feed: match[3]?.trim() ?? null
       });
     }
   }
 
-  return channels;
-}
-
-function findGameSection(
-  fullText,
-  away,
-  home
-) {
-  const normalizedText =
-    normalize(fullText);
-
-  const awayTerms =
-    getUsefulTeamTerms(away);
-
-  const homeTerms =
-    getUsefulTeamTerms(home);
-
-  let bestIndex = -1;
-
-  for (const awayTerm of awayTerms) {
-    const awayIndex =
-      normalizedText.indexOf(
-        awayTerm
-      );
-
-    if (awayIndex < 0) {
-      continue;
-    }
-
-    for (const homeTerm of homeTerms) {
-      const homeIndex =
-        normalizedText.indexOf(
-          homeTerm,
-          awayIndex
-        );
-
-      if (
-        homeIndex >= 0 &&
-        homeIndex - awayIndex < 250
-      ) {
-        bestIndex =
-          awayIndex;
-
-        break;
-      }
-    }
-
-    if (bestIndex >= 0) {
-      break;
-    }
-  }
-
-  if (bestIndex < 0) {
-    const awayIndex =
-      findTeamIndex(
-        fullText,
-        away
-      );
-
-    const homeIndex =
-      findTeamIndex(
-        fullText,
-        home
-      );
-
-    if (
-      awayIndex >= 0 &&
-      homeIndex >= 0
-    ) {
-      bestIndex =
-        Math.min(
-          awayIndex,
-          homeIndex
-        );
-    }
-  }
-
-  if (bestIndex < 0) {
-    return null;
-  }
-
-  /*
-   * DIRECTV usually lists the channels
-   * immediately after the matchup.
-   */
-  return normalizedText.slice(
-    Math.max(0, bestIndex - 100),
-    bestIndex + 700
-  );
+  return results;
 }
 
 export async function lookupDirectvGame({
@@ -235,47 +84,75 @@ export async function lookupDirectvGame({
     `&sport=${encodeURIComponent(sportId)}`;
 
   try {
-    const response =
-      await fetch(url, {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0"
-        }
-      });
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/152 Safari/537.36",
+        "Accept":
+          "text/html,application/xhtml+xml"
+      }
+    });
 
     if (!response.ok) {
-      throw new Error(
-        `DIRECTV guide request failed: ${response.status}`
+      console.error(
+        "DIRECTV response status:",
+        response.status
       );
+
+      return null;
     }
 
     const html =
       await response.text();
 
-    const fullText =
-      cleanText(html);
+    const text =
+      cleanHtml(html);
 
-    const section =
-      findGameSection(
-        fullText,
-        away,
-        home
+    const normalizedText =
+      normalize(text);
+
+    const matchup =
+      normalize(
+        `${away} at ${home}`
       );
 
-    if (!section) {
+    const matchupIndex =
+      normalizedText.indexOf(matchup);
+
+    if (matchupIndex < 0) {
       console.log(
-        `DIRECTV: matchup not found: ${away} @ ${home}`
+        `DIRECTV matchup not found: ${away} at ${home}`
+      );
+
+      console.log(
+        "DIRECTV page sample:",
+        text.slice(0, 500)
       );
 
       return null;
     }
+
+    /*
+     * The channel information appears immediately
+     * after the matchup on DIRECTV's schedule.
+     */
+    const section =
+      text.slice(
+        matchupIndex,
+        matchupIndex + 700
+      );
 
     const channels =
       extractChannels(section);
 
     if (channels.length === 0) {
       console.log(
-        `DIRECTV: matchup found but no Extra Innings channel: ${away} @ ${home}`
+        `DIRECTV matchup found but channel not found: ${away} at ${home}`
+      );
+
+      console.log(
+        "DIRECTV section:",
+        section
       );
 
       return null;
@@ -283,11 +160,9 @@ export async function lookupDirectvGame({
 
     return {
       provider: "DIRECTV",
-      package:
-        "MLB Extra Innings",
+      package: "MLB Extra Innings",
       channels,
-      source:
-        "DIRECTV Sports Guide"
+      source: "DIRECTV Sports Guide"
     };
 
   } catch (error) {
