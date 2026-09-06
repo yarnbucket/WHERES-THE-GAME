@@ -1,9 +1,11 @@
 // DIRECTV channel lookup for Where's the Game
+
 import express from "express";
 
 const router = express.Router();
 
 const DIRECTV_CHANNELS = {
+  // National sports
   ESPN: {
     channel: "206",
     type: "national"
@@ -40,6 +42,8 @@ const DIRECTV_CHANNELS = {
     channel: "215",
     type: "national"
   },
+
+  // National entertainment / sports
   TNT: {
     channel: "245",
     type: "national"
@@ -60,6 +64,8 @@ const DIRECTV_CHANNELS = {
     channel: "221",
     type: "national"
   },
+
+  // College sports
   SEC: {
     channel: "611",
     type: "national"
@@ -73,6 +79,29 @@ const DIRECTV_CHANNELS = {
     type: "national"
   },
 
+  // Pittsburgh regional sports
+  "SportsNet Pittsburgh": {
+    channel: "659",
+    type: "regional",
+    market: "Pittsburgh"
+  },
+  "SportsNet Pittsburgh HD": {
+    channel: "659",
+    type: "regional",
+    market: "Pittsburgh"
+  },
+  "AT&T SportsNet Pittsburgh": {
+    channel: "659",
+    type: "regional",
+    market: "Pittsburgh"
+  },
+  SNP: {
+    channel: "659",
+    type: "regional",
+    market: "Pittsburgh"
+  },
+
+  // Local broadcast networks
   ABC: {
     channel: null,
     type: "local",
@@ -96,19 +125,36 @@ const DIRECTV_CHANNELS = {
 };
 
 function lookupChannel(network) {
-  if (!network) return null;
+  if (!network) {
+    return null;
+  }
 
-  const exact = DIRECTV_CHANNELS[network];
+  const cleanNetwork = String(network).trim();
+
+  const exact = DIRECTV_CHANNELS[cleanNetwork];
 
   if (exact) {
     return {
-      network,
+      network: cleanNetwork,
       ...exact
     };
   }
 
+  // Case-insensitive fallback
+  const matchedName = Object.keys(DIRECTV_CHANNELS).find(
+    (name) =>
+      name.toLowerCase() === cleanNetwork.toLowerCase()
+  );
+
+  if (matchedName) {
+    return {
+      network: matchedName,
+      ...DIRECTV_CHANNELS[matchedName]
+    };
+  }
+
   return {
-    network,
+    network: cleanNetwork,
     channel: null,
     type: "unknown",
     note: "DIRECTV channel mapping not yet available"
@@ -118,7 +164,9 @@ function lookupChannel(network) {
 // GET /channels
 // Example: /channels?network=ESPN
 router.get("/", (req, res) => {
-  const network = String(req.query.network ?? "").trim();
+  const network = String(
+    req.query.network ?? ""
+  ).trim();
 
   if (!network) {
     return res.json({
@@ -128,27 +176,10 @@ router.get("/", (req, res) => {
     });
   }
 
-  res.json({
+  return res.json({
     status: "ok",
     result: lookupChannel(network)
   });
 });
 
 export default router;
-"SportsNet Pittsburgh": {
-  channel: "659",
-  type: "regional",
-  market: "Pittsburgh"
-},
-
-"SportsNet Pittsburgh HD": {
-  channel: "659",
-  type: "regional",
-  market: "Pittsburgh"
-},
-
-"AT&T SportsNet Pittsburgh": {
-  channel: "659",
-  type: "regional",
-  market: "Pittsburgh"
-},
