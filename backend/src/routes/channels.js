@@ -135,3 +135,20 @@ router.get("/", (req, res) => {
 });
 
 export default router;
+"SportsNet Pittsburgh": {
+  channel: "659",
+  type: "regional",
+  market: "Pittsburgh"
+},
+
+"SportsNet Pittsburgh HD": {
+  channel: "659",
+  type: "regional",
+  market: "Pittsburgh"
+},
+
+"AT&T SportsNet Pittsburgh": {
+  channel: "659",
+  type: "regional",
+  market: "Pittsburgh"
+},
