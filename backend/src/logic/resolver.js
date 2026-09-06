@@ -11,6 +11,7 @@ const DIRECTV_CHANNELS = {
   ESPN2: "209",
   ESPNEWS: "207",
   ESPNU: "208",
+  "ESPN Deportes": "466",
 
   // FOX family
   FS1: "219",
@@ -34,8 +35,10 @@ const DIRECTV_CHANNELS = {
   // College sports
   SEC: "611",
   "SEC Network": "611",
+
   ACCN: "612",
   "ACC Network": "612",
+
   BTN: "610",
   "Big Ten Network": "610",
 
@@ -240,7 +243,8 @@ function findCaseInsensitive(map, source) {
   return (
     Object.keys(map).find(
       (name) =>
-        name.toLowerCase() === source.toLowerCase()
+        name.toLowerCase() ===
+        source.toLowerCase()
     ) ?? null
   );
 }
@@ -255,6 +259,50 @@ function isPittsburghTeam(game) {
   );
 }
 
+function normalizeSportKey(sport) {
+  const value = String(sport ?? "").toLowerCase();
+
+  if (
+    value.includes("mlb") ||
+    value.includes("baseball")
+  ) {
+    return "mlb";
+  }
+
+  if (value.includes("nba")) {
+    return "nba";
+  }
+
+  if (
+    value.includes("nhl") ||
+    value.includes("hockey")
+  ) {
+    return "nhl";
+  }
+
+  if (value.includes("nfl")) {
+    return "nfl";
+  }
+
+  if (
+    value.includes("ncaaf") ||
+    value.includes("ncaa football") ||
+    value.includes("college football")
+  ) {
+    return "ncaaf";
+  }
+
+  if (
+    value.includes("ncaab") ||
+    value.includes("ncaa basketball") ||
+    value.includes("college basketball")
+  ) {
+    return "ncaab";
+  }
+
+  return null;
+}
+
 export function resolveSource(source) {
   const cleanSource = normalizeSourceName(source);
 
@@ -262,14 +310,14 @@ export function resolveSource(source) {
     return null;
   }
 
-  // DIRECTV national / regional channels
   const directvKey = findCaseInsensitive(
     DIRECTV_CHANNELS,
     cleanSource
   );
 
   if (directvKey) {
-    const channel = DIRECTV_CHANNELS[directvKey];
+    const channel =
+      DIRECTV_CHANNELS[directvKey];
 
     return {
       source: cleanSource,
@@ -282,7 +330,6 @@ export function resolveSource(source) {
     };
   }
 
-  // Pittsburgh local broadcast profile
   const localKey = findCaseInsensitive(
     PITTSBURGH_LOCAL_CHANNELS,
     cleanSource
@@ -298,7 +345,6 @@ export function resolveSource(source) {
     };
   }
 
-  // Known streaming sources
   const streamingKey = findCaseInsensitive(
     STREAMING_SOURCES,
     cleanSource
@@ -312,7 +358,6 @@ export function resolveSource(source) {
   }
 
   // Team-branded regional TV feeds
-  // Examples: Reds.TV, Brewers.TV, Padres.TV, Rockies.TV
   if (/\.TV$/i.test(cleanSource)) {
     return {
       source: cleanSource,
@@ -322,13 +367,13 @@ export function resolveSource(source) {
       type: "regional",
       streaming: true,
       note:
-        "Regional TV / streaming service; DIRECTV availability varies by market"
+        "Regional TV / streaming service; provider availability varies by market"
     };
   }
 
-  // Unknown sources are preserved instead of discarded
   return {
     source: cleanSource,
+    network: cleanSource,
     type: "unknown",
     directvChannel: null,
     note:
@@ -342,17 +387,20 @@ export function resolveNetwork(networkString) {
     .filter(Boolean);
 }
 
-export function resolveGame(game) {
+export function resolveGame(
+  game,
+  providerKey = "directv"
+) {
   const sources = resolveNetwork(game.network);
 
-  const hasRecognizedTvSource = sources.some(
-    (item) =>
-      item.type === "national" ||
-      item.type === "local" ||
-      item.type === "regional"
-  );
+  const hasRecognizedTvSource =
+    sources.some(
+      (item) =>
+        item.type === "national" ||
+        item.type === "local" ||
+        item.type === "regional"
+    );
 
-  // Pittsburgh fallback for Pirates / Penguins
   if (
     isPittsburghTeam(game) &&
     !hasRecognizedTvSource
@@ -367,6 +415,8 @@ export function resolveGame(game) {
     });
   }
 
+  // Existing DIRECTV output
+  // Kept for compatibility with the current frontend.
   const directv = sources.filter(
     (item) =>
       item.directvChannel ||
@@ -375,11 +425,38 @@ export function resolveGame(game) {
       item.type === "national"
   );
 
+  // Streaming sources directly reported
+  // by the schedule/source resolver.
   const streaming = sources.filter(
     (item) =>
       item.type === "streaming" ||
       item.streaming === true
   );
+
+  // Provider-specific channel lookup.
+  const providerChannels = sources
+    .map((item) =>
+      getProviderChannel(
+        providerKey,
+        item.network ??
+          item.source
+      )
+    )
+    .filter(Boolean);
+
+  const sportKey =
+    normalizeSportKey(game.sport);
+
+  // Premium / out-of-market package:
+  // MLB Extra Innings,
+  // NBA League Pass,
+  // NHL Center Ice, etc.
+  const leaguePackage = sportKey
+    ? getLeaguePackage(
+        providerKey,
+        sportKey
+      )
+    : null;
 
   return {
     id: game.id ?? null,
@@ -390,13 +467,18 @@ export function resolveGame(game) {
     startTime: game.startTime ?? null,
     status: game.status ?? null,
     venue: game.venue ?? null,
-    broadcast: game.network ?? null,
 
-    // Current frontend compatibility
+    broadcast:
+      game.network ?? null,
+
+    // Existing fields
     directv,
-
-    // Master viewing-source data
     sources,
-    streaming
+    streaming,
+
+    // New provider system
+    providerKey,
+    providerChannels,
+    leaguePackage
   };
 }
