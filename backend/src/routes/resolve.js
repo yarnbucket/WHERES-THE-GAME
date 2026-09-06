@@ -263,14 +263,14 @@ router.get("/", async (req, res) => {
         )
       );
 
-    return res.json({
-      status: "ok",
-      sport: sportKey,
-      date,
-      provider: providerKey,
-      count: games.length,
-      games
-    });
+   return res.json({
+  status: "ok",
+  sport: sportKey,
+  date,
+  provider: providerKey,
+  count: games.length,
+  games
+});
 
   } catch (error) {
     console.error(
