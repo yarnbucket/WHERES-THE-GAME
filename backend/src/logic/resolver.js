@@ -109,7 +109,7 @@ const STREAMING_SOURCES = {
     note: "SEC Network+"
   },
 
-  SECN+: {
+  "SECN+": {
     service: "ESPN",
     type: "streaming",
     note: "SEC Network+"
