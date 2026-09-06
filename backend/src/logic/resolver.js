@@ -1,21 +1,32 @@
 // Master source resolver for Where's the Game
 
 const DIRECTV_CHANNELS = {
+  // ESPN family
   ESPN: "206",
   ESPN2: "209",
-  ESPNU: "208",
   ESPNEWS: "207",
+  ESPNU: "208",
+
+  // FOX family
   FS1: "219",
   FS2: "618",
+
+  // League networks
   "NFL Network": "212",
   "MLB Network": "213",
   "NBA TV": "216",
   "NHL Network": "215",
+
+  // Turner / entertainment sports
   TNT: "245",
   TBS: "247",
   truTV: "246",
   USA: "242",
+
+  // Other national sports networks
   "CBS Sports Network": "221",
+
+  // College sports
   SEC: "611",
   "SEC Network": "611",
   ACCN: "612",
@@ -36,24 +47,42 @@ const PITTSBURGH_LOCAL_CHANNELS = {
     station: "WTAE",
     type: "local"
   },
+
   CBS: {
     directvChannel: "2",
     station: "KDKA",
     type: "local"
   },
+
   FOX: {
     directvChannel: "53",
     station: "WPGH",
     type: "local"
   },
+
   NBC: {
     directvChannel: "11",
     station: "WPXI",
     type: "local"
+  },
+
+  CW: {
+    directvChannel: null,
+    station: "The CW",
+    type: "local",
+    note: "Local DIRECTV channel varies by market"
+  },
+
+  "The CW": {
+    directvChannel: null,
+    station: "The CW",
+    type: "local",
+    note: "Local DIRECTV channel varies by market"
   }
 };
 
 const STREAMING_SOURCES = {
+  // ESPN streaming
   ACCNX: {
     service: "ESPN",
     type: "streaming",
@@ -88,6 +117,7 @@ const STREAMING_SOURCES = {
     type: "streaming"
   },
 
+  // Major streaming services
   Peacock: {
     service: "Peacock",
     type: "streaming"
@@ -103,6 +133,11 @@ const STREAMING_SOURCES = {
     type: "streaming"
   },
 
+  "Amazon Prime Video": {
+    service: "Prime Video",
+    type: "streaming"
+  },
+
   Netflix: {
     service: "Netflix",
     type: "streaming"
@@ -113,18 +148,53 @@ const STREAMING_SOURCES = {
     type: "streaming"
   },
 
-  AppleTV: {
-    service: "Apple TV+",
+  "Apple TV": {
+    service: "Apple TV",
     type: "streaming"
   },
 
-  "Apple TV": {
-    service: "Apple TV+",
+  AppleTV: {
+    service: "Apple TV",
     type: "streaming"
   },
 
   Hulu: {
     service: "Hulu",
+    type: "streaming"
+  },
+
+  "Hulu + Live TV": {
+    service: "Hulu + Live TV",
+    type: "streaming"
+  },
+
+  YouTube: {
+    service: "YouTube",
+    type: "streaming"
+  },
+
+  "YouTube TV": {
+    service: "YouTube TV",
+    type: "streaming"
+  },
+
+  Paramount: {
+    service: "Paramount+",
+    type: "streaming"
+  },
+
+  "Paramount+": {
+    service: "Paramount+",
+    type: "streaming"
+  },
+
+  "NFL+": {
+    service: "NFL+",
+    type: "streaming"
+  },
+
+  "NFL Sunday Ticket": {
+    service: "NFL Sunday Ticket",
     type: "streaming"
   },
 
@@ -144,16 +214,6 @@ const STREAMING_SOURCES = {
   }
 };
 
-function isPittsburghTeam(game) {
-  const teams =
-    `${game?.away ?? ""} ${game?.home ?? ""}`.toLowerCase();
-
-  return (
-    teams.includes("pittsburgh pirates") ||
-    teams.includes("pittsburgh penguins")
-  );
-}
-
 function normalizeSourceName(source) {
   return String(source ?? "")
     .trim()
@@ -172,12 +232,22 @@ function splitSources(sourceString) {
 }
 
 function findCaseInsensitive(map, source) {
-  const key = Object.keys(map).find(
-    (name) =>
-      name.toLowerCase() === source.toLowerCase()
+  return (
+    Object.keys(map).find(
+      (name) =>
+        name.toLowerCase() === source.toLowerCase()
+    ) ?? null
   );
+}
 
-  return key ?? null;
+function isPittsburghTeam(game) {
+  const teams =
+    `${game?.away ?? ""} ${game?.home ?? ""}`.toLowerCase();
+
+  return (
+    teams.includes("pittsburgh pirates") ||
+    teams.includes("pittsburgh penguins")
+  );
 }
 
 export function resolveSource(source) {
@@ -187,6 +257,7 @@ export function resolveSource(source) {
     return null;
   }
 
+  // DIRECTV national / regional channels
   const directvKey = findCaseInsensitive(
     DIRECTV_CHANNELS,
     cleanSource
@@ -206,6 +277,7 @@ export function resolveSource(source) {
     };
   }
 
+  // Pittsburgh local broadcast profile
   const localKey = findCaseInsensitive(
     PITTSBURGH_LOCAL_CHANNELS,
     cleanSource
@@ -221,6 +293,7 @@ export function resolveSource(source) {
     };
   }
 
+  // Known streaming sources
   const streamingKey = findCaseInsensitive(
     STREAMING_SOURCES,
     cleanSource
@@ -233,7 +306,7 @@ export function resolveSource(source) {
     };
   }
 
-  // Team-branded regional sports feeds
+  // Team-branded regional TV feeds
   // Examples: Reds.TV, Brewers.TV, Padres.TV, Rockies.TV
   if (/\.TV$/i.test(cleanSource)) {
     return {
@@ -248,6 +321,7 @@ export function resolveSource(source) {
     };
   }
 
+  // Unknown sources are preserved instead of discarded
   return {
     source: cleanSource,
     type: "unknown",
@@ -273,6 +347,7 @@ export function resolveGame(game) {
       item.type === "regional"
   );
 
+  // Pittsburgh fallback for Pirates / Penguins
   if (
     isPittsburghTeam(game) &&
     !hasRecognizedTvSource
@@ -312,10 +387,10 @@ export function resolveGame(game) {
     venue: game.venue ?? null,
     broadcast: game.network ?? null,
 
-    // Kept for compatibility with current frontend
+    // Current frontend compatibility
     directv,
 
-    // Master source data
+    // Master viewing-source data
     sources,
     streaming
   };
