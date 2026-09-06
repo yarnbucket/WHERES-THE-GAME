@@ -26,10 +26,33 @@ const DIRECTV_CHANNELS = {
   SNP: "659"
 };
 
-const LOCAL_NETWORKS = ["ABC", "CBS", "FOX", "NBC"];
+// Pittsburgh / 15220 local DIRECTV profile
+const PITTSBURGH_LOCAL_CHANNELS = {
+  ABC: {
+    directvChannel: "4",
+    station: "WTAE",
+    type: "local"
+  },
+  CBS: {
+    directvChannel: "2",
+    station: "KDKA",
+    type: "local"
+  },
+  FOX: {
+    directvChannel: "53",
+    station: "WPGH",
+    type: "local"
+  },
+  NBC: {
+    directvChannel: "11",
+    station: "WPXI",
+    type: "local"
+  }
+};
 
 function isPittsburghTeam(game) {
-  const teams = `${game?.away ?? ""} ${game?.home ?? ""}`.toLowerCase();
+  const teams =
+    `${game?.away ?? ""} ${game?.home ?? ""}`.toLowerCase();
 
   return (
     teams.includes("pittsburgh pirates") ||
@@ -59,12 +82,12 @@ export function resolveNetwork(networkString) {
       };
     }
 
-    if (LOCAL_NETWORKS.includes(network)) {
+    if (PITTSBURGH_LOCAL_CHANNELS[network]) {
       return {
         network,
-        directvChannel: null,
-        type: "local",
-        note: "DIRECTV local channel varies by ZIP code"
+        ...PITTSBURGH_LOCAL_CHANNELS[network],
+        market: "Pittsburgh",
+        zipProfile: "15220"
       };
     }
 
@@ -80,10 +103,6 @@ export function resolveNetwork(networkString) {
 export function resolveGame(game) {
   const directv = resolveNetwork(game.network);
 
-  // If ESPN does not provide the Pittsburgh regional feed,
-  // add SportsNet Pittsburgh as the regional DIRECTV option
-  // for Pirates and Penguins games unless a recognized
-  // national/local DIRECTV broadcast is already present.
   const hasRecognizedBroadcast = directv.some(
     (item) =>
       item.type === "national" ||
@@ -91,11 +110,15 @@ export function resolveGame(game) {
       item.type === "regional"
   );
 
-  if (isPittsburghTeam(game) && !hasRecognizedBroadcast) {
+  if (
+    isPittsburghTeam(game) &&
+    !hasRecognizedBroadcast
+  ) {
     directv.push({
       network: "SportsNet Pittsburgh",
       directvChannel: "659",
       type: "regional",
+      market: "Pittsburgh",
       note: "Pittsburgh regional feed"
     });
   }
