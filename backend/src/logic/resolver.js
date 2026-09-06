@@ -1,3 +1,8 @@
+import {
+  getProviderChannel,
+  getLeaguePackage
+} from "./providers.js";
+
 // Master source resolver for Where's the Game
 
 const DIRECTV_CHANNELS = {
