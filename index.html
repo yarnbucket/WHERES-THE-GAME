@@ -46,6 +46,7 @@ const API_BASE="https://wheres-the-game.onrender.com";
 const EASTERN_TZ="America/New_York";
 const sportLabels={nfl:"NFL",ncaaf:"NCAA Football",mlb:"MLB",nhl:"NHL",nba:"NBA",ncaab:"NCAA Basketball"};
 let selectedSport="mlb", selectedDate=new Date(), favoritesOnly=false, currentGames=[];
+let serverTimeBaseMs=null, serverTimePerfBase=null;
 const gamesList=document.getElementById("gamesList"), statusBox=document.getElementById("status"), scheduleTitle=document.getElementById("scheduleTitle"), dateLabel=document.getElementById("dateLabel"), todayNav=document.getElementById("todayNav"), favoritesNav=document.getElementById("favoritesNav"), currentTimeEl=document.getElementById("currentTime"), remainingGamesEl=document.getElementById("remainingGames");
 
 function toApiDate(date){
@@ -83,20 +84,34 @@ function formatTime(value){
   return `${time} ET`;
 }
 
+function syncServerTime(serverTime){
+  const parsed=Date.parse(serverTime||"");
+  if(!Number.isFinite(parsed))return;
+  serverTimeBaseMs=parsed;
+  serverTimePerfBase=performance.now();
+}
+
+function getCurrentServerTime(){
+  if(!Number.isFinite(serverTimeBaseMs)||!Number.isFinite(serverTimePerfBase))return null;
+  return new Date(serverTimeBaseMs+(performance.now()-serverTimePerfBase));
+}
+
 function formatCurrentEasternTime(){
+  const now=getCurrentServerTime();
+  if(!now)return "--:-- ET";
   const time=new Intl.DateTimeFormat("en-US",{
     timeZone:EASTERN_TZ,
     hour:"numeric",
     minute:"2-digit",
     hour12:true
-  }).format(new Date());
+  }).format(now);
   return `${time} ET`;
 }
 
 function statusText(game){const s=game?.status;if(typeof s==="string")return s.toLowerCase();if(s&&typeof s==="object")return [s.type?.name,s.type?.state,s.type?.description,s.type?.detail,s.name,s.state,s.description,s.detail].filter(Boolean).join(" ").toLowerCase();return""}
 function isFinalGame(game){const s=statusText(game);return s.includes("final")||s.includes("completed")||s.includes("post")&&s.includes("game")||game?.status?.type?.completed===true||game?.completed===true}
 function isLiveGame(game){const s=statusText(game);return s.includes("in progress")||s.includes("inprogress")||s.includes("live")||s.includes("halftime")||s.includes("intermission")||s.includes("end of")||s.includes("quarter")||s.includes("period")||s.includes("inning")||game?.status?.type?.state==="in"}
-function remainingGameCount(){const now=Date.now();return currentGames.filter(game=>{if(isFinalGame(game))return false;if(isLiveGame(game))return true;const start=Date.parse(game?.startTime||"");return Number.isFinite(start)?start>now:true}).length}
+function remainingGameCount(){const serverNow=getCurrentServerTime();const now=serverNow?serverNow.getTime():Date.now();return currentGames.filter(game=>{if(isFinalGame(game))return false;if(isLiveGame(game))return true;const start=Date.parse(game?.startTime||"");return Number.isFinite(start)?start>now:true}).length}
 function updateDateMeta(){currentTimeEl.textContent=formatCurrentEasternTime();remainingGamesEl.textContent=`Remaining games: ${remainingGameCount()}`}
 function getFavorites(){try{const x=JSON.parse(localStorage.getItem("wtg-live-favorites")||"[]");return Array.isArray(x)?x:[]}catch{return[]}}
 function saveFavorites(items){localStorage.setItem("wtg-live-favorites",JSON.stringify(items))}
@@ -107,7 +122,7 @@ function renderGame(game){const d=getDirectvDisplay(game),favorite=isFavorite(ga
 function renderGames(games){gamesList.innerHTML=games.map(renderGame).join("");updateDateMeta()}
 function setStatus(text,waking=false){statusBox.textContent=text;statusBox.className=waking?"status waking":"status";statusBox.style.display="block"}
 function hideStatus(){statusBox.style.display="none"}
-async function loadGames(){favoritesOnly=false;updateDateMeta();todayNav.classList.add("active");favoritesNav.classList.remove("active");dateLabel.textContent=formatDate(selectedDate);scheduleTitle.textContent=`${sportLabels[selectedSport]} Games`;gamesList.innerHTML="";setStatus("Loading live games... If the free backend was asleep, this can take up to about a minute.",true);try{const date=toApiDate(selectedDate);const response=await fetch(`${API_BASE}/resolve?sport=${selectedSport}&date=${date}&provider=directv`);if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json();currentGames=Array.isArray(data.games)?data.games:[];scheduleTitle.textContent=`${sportLabels[selectedSport]} Games (${currentGames.length})`;if(!currentGames.length){setStatus("No games found for this sport and date.");return}hideStatus();renderGames(currentGames)}catch(error){console.error(error);setStatus("Could not load live games. The backend may still be waking up; refresh in a moment.")}}
+async function loadGames(){favoritesOnly=false;updateDateMeta();todayNav.classList.add("active");favoritesNav.classList.remove("active");dateLabel.textContent=formatDate(selectedDate);scheduleTitle.textContent=`${sportLabels[selectedSport]} Games`;gamesList.innerHTML="";setStatus("Loading live games... If the free backend was asleep, this can take up to about a minute.",true);try{const date=toApiDate(selectedDate);const response=await fetch(`${API_BASE}/resolve?sport=${selectedSport}&date=${date}&provider=directv`);if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json();syncServerTime(data.serverTime);currentGames=Array.isArray(data.games)?data.games:[];scheduleTitle.textContent=`${sportLabels[selectedSport]} Games (${currentGames.length})`;if(!currentGames.length){setStatus("No games found for this sport and date.");return}hideStatus();renderGames(currentGames)}catch(error){console.error(error);setStatus("Could not load live games. The backend may still be waking up; refresh in a moment.")}}
 function loadFavorites(){favoritesOnly=true;updateDateMeta();todayNav.classList.remove("active");favoritesNav.classList.add("active");const favs=getFavorites();currentGames=favs;dateLabel.textContent="Favorites";scheduleTitle.textContent=`Favorite Games (${favs.length})`;if(!favs.length){gamesList.innerHTML="";setStatus("No favorite games yet. Tap ☆ on a game to save it.");return}hideStatus();renderGames(favs)}
 document.querySelectorAll("#sportTabs button").forEach(button=>button.addEventListener("click",()=>{document.querySelectorAll("#sportTabs button").forEach(btn=>btn.classList.remove("active"));button.classList.add("active");selectedSport=button.dataset.sport;loadGames()}));
 document.getElementById("prevDay").addEventListener("click",()=>{selectedDate.setDate(selectedDate.getDate()-1);selectedDate=new Date(selectedDate);loadGames()});
