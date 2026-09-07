@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Where's the Game? — Setup Test</title>
+<style>
+:root{--bg:#f5f8fc;--card:#fff;--ink:#0b1b3a;--muted:#60708d;--blue:#1769e8;--blue2:#e8f2ff;--line:#dce5f0;--green:#177245;--greenbg:#eaf8ef;--red:#a52b32;--redbg:#fff0f1;--gold:#9a6500;--goldbg:#fff7df;--shadow:0 10px 28px rgba(23,55,99,.10)}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#edf4ff 0,#f5f8fc 220px);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink)}
+.app{width:min(100%,760px);margin:0 auto;padding:18px 14px 40px}.hero{text-align:center;padding:14px 0 18px}.logo{width:64px;height:64px;border-radius:19px;margin:0 auto 10px;display:grid;place-items:center;background:var(--blue);color:#fff;font-size:31px;box-shadow:var(--shadow)}
+h1{font-size:30px;line-height:1;margin:0;font-style:italic;letter-spacing:-.03em}.tagline{margin:8px 0 0;color:var(--muted);font-weight:700}.test-pill{display:inline-block;margin-top:10px;padding:5px 9px;border-radius:999px;background:var(--goldbg);color:var(--gold);font-size:11px;font-weight:900;letter-spacing:.05em}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:var(--shadow);margin-bottom:14px}.card h2{font-size:19px;margin:0 0 5px}.sub{color:var(--muted);font-size:13px;margin:0 0 13px}.label{display:block;font-size:12px;font-weight:900;letter-spacing:.05em;margin:0 0 7px;color:#40516e}.name-row{display:grid;grid-template-columns:1fr auto;gap:8px}.name-row input{width:100%;height:46px;border:1px solid #b9c6d8;border-radius:12px;padding:0 12px;font-size:16px;color:var(--ink);background:#fff}.btn{border:0;border-radius:12px;min-height:46px;padding:0 14px;font-weight:900;cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#eef5ff;color:var(--blue);border:1px solid #cfe0fa}.profile-list{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.profile-chip{border:1px solid #c9d5e6;background:#f8fbff;color:#334766;border-radius:999px;padding:9px 12px;font-weight:850;cursor:pointer}.profile-chip.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.active-profile{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;border-radius:14px;background:var(--blue2);margin-top:12px}.active-profile strong{font-size:15px}.active-profile small{display:block;color:var(--muted);margin-top:2px}.mode{font-size:12px;font-weight:900;color:var(--blue);background:#fff;border-radius:999px;padding:6px 9px;white-space:nowrap}
+.overview-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.date{font-size:12px;color:var(--muted);font-weight:800}.total{font-size:12px;font-weight:900;background:#eef5ff;color:var(--blue);padding:6px 8px;border-radius:999px}.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}.summary-box{text-align:center;border:1px solid var(--line);border-radius:14px;padding:12px 8px;background:#fbfdff}.summary-box b{display:block;font-size:24px}.summary-box span{font-size:11px;color:var(--muted);font-weight:800}.sports{display:grid;gap:8px}.sport-row{display:grid;grid-template-columns:46px 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:10px 11px}.sport-icon{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:#eef5ff;font-size:21px}.sport-name{font-weight:900}.sport-detail{font-size:12px;color:var(--muted);margin-top:2px}.sport-count{font-size:18px;font-weight:950;color:var(--blue)}.loading{padding:14px;text-align:center;color:var(--muted);font-size:13px;border:1px dashed #c4d1e2;border-radius:14px}.tiny{font-size:11px;color:var(--muted);margin:10px 0 0;line-height:1.45}
+.match{border-radius:14px;padding:11px 12px;margin-top:8px;border:1px solid}.match.love{background:var(--greenbg);border-color:#bfe4ca}.match.hate{background:var(--redbg);border-color:#f0c6c9}.match-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.match-title{font-weight:900;font-size:14px}.badge{font-size:10px;font-weight:950;letter-spacing:.05em;padding:5px 7px;border-radius:999px;background:#fff}.match-detail{font-size:12px;color:#53647d;margin-top:4px}.empty{color:var(--muted);font-size:13px;padding:8px 0}.teams{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.team{font-size:11px;font-weight:850;padding:6px 8px;border-radius:999px;background:#f3f6fa;color:#465873}.team.love{background:var(--greenbg);color:var(--green)}.team.hate{background:var(--redbg);color:var(--red)}
+.cta{position:sticky;bottom:10px;margin-top:16px}.cta button{width:100%;height:56px;border:0;border-radius:16px;background:var(--blue);color:#fff;font-size:17px;font-weight:950;box-shadow:0 12px 28px rgba(23,105,232,.28);cursor:pointer}.cta-note{text-align:center;color:var(--muted);font-size:11px;margin:7px 0 0}
+@media(max-width:520px){.app{padding:12px 10px 28px}.hero{padding-top:8px}h1{font-size:27px}.summary-grid{gap:5px}.summary-box{padding:10px 4px}.summary-box b{font-size:21px}.name-row{grid-template-columns:1fr}.name-row .btn{width:100%}}
+</style>
+</head>
+<body>
+<div class="app">
+  <section class="hero">
+    <div class="logo">📺</div>
+    <h1>WHERE'S THE GAME?</h1>
+    <p class="tagline">Find the game. Plan your sports day.</p>
+    <span class="test-pill">SETUP SCREEN TEST BUILD</span>
+  </section>
+
+  <section class="card">
+    <h2>Who's watching?</h2>
+    <p class="sub">Add your name or load an existing sports profile.</p>
+    <label class="label" for="profileName">NAME</label>
+    <div class="name-row">
+      <input id="profileName" maxlength="24" placeholder="Enter name">
+      <button class="btn primary" id="addProfile">ADD PROFILE</button>
+    </div>
+    <div class="profile-list" id="profileList"></div>
+    <div class="active-profile" id="activeProfile"></div>
+  </section>
+
+  <section class="card">
+    <div class="overview-top">
+      <div><h2>How's my sports day look?</h2><div class="date" id="todayDate"></div></div>
+      <div class="total" id="totalEvents">Checking games…</div>
+    </div>
+    <div class="summary-grid">
+      <div class="summary-box"><b id="tvCount">—</b><span>ON YOUR TV</span></div>
+      <div class="summary-box"><b id="streamCount">—</b><span>STREAM / OTHER</span></div>
+      <div class="summary-box"><b id="profileCount">—</b><span>PROFILE GAMES</span></div>
+    </div>
+    <div class="sports" id="sportsList"><div class="loading">Loading today's connected sports…</div></div>
+    <p class="tiny">This first test uses the sports feeds already connected in 0.1C. “On your TV” means the current feed has a DIRECTV channel match; the viewing breakdown can be refined after you approve the setup concept.</p>
+  </section>
+
+  <section class="card">
+    <h2 id="profileGamesTitle">My Love / Hate Games</h2>
+    <p class="sub">Games involving teams that matter to the loaded profile rise to the top.</p>
+    <div id="profileGames"></div>
+    <div class="teams" id="teamTags"></div>
+  </section>
+
+  <div class="cta">
+    <button id="showGames">SHOW ME THE GAMES →</button>
+    <p class="cta-note">Opens the current 0.1C schedule. This test page does not replace it.</p>
+  </div>
+</div>
+<script>
+const API_BASE="https://wheres-the-game.onrender.com";
+const PROFILE_KEY="wtg-profiles-test-v1";
+const ACTIVE_KEY="wtg-active-profile-test-v1";
+const sports=[
+  {id:"nfl",name:"NFL",icon:"🏈"},{id:"ncaaf",name:"College Football",icon:"🏈"},
+  {id:"mlb",name:"MLB",icon:"⚾"},{id:"nhl",name:"NHL",icon:"🏒"},
+  {id:"nba",name:"NBA",icon:"🏀"},{id:"ncaab",name:"College Basketball",icon:"🏀"},
+  {id:"wnba",name:"WNBA",icon:"🏀"},{id:"racing",name:"Racing",icon:"🏁"}
+];
+const jones={id:"jones",name:"Jones",mode:"Jones Mode",love:["Wisconsin","Clemson","Wyoming","Cleveland"],hate:["West Virginia","WVU","Alabama"]};
+let profiles=[];let activeId="jones";let allGames=[];
+function loadProfiles(){
+  try{profiles=JSON.parse(localStorage.getItem(PROFILE_KEY)||"[]")}catch{profiles=[]}
+  if(!profiles.some(p=>p.id==="jones"))profiles.unshift(jones);
+  activeId=localStorage.getItem(ACTIVE_KEY)||"jones";
+  if(!profiles.some(p=>p.id===activeId))activeId="jones";
+}
+function saveProfiles(){localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles));localStorage.setItem(ACTIVE_KEY,activeId)}
+function activeProfile(){return profiles.find(p=>p.id===activeId)||jones}
+function escapeHtml(v=""){return String(v).replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[c]))}
+function renderProfiles(){
+  const p=activeProfile();
+  document.getElementById("profileList").innerHTML=profiles.map(x=>`<button class="profile-chip ${x.id===activeId?"active":""}" data-profile="${x.id}">${escapeHtml(x.name)}</button>`).join("");
+  document.getElementById("activeProfile").innerHTML=`<div><strong>${escapeHtml(p.name)}</strong><small>${p.love.length+p.hate.length?`${p.love.length} love • ${p.hate.length} hate teams`:"No Love / Hate teams yet"}</small></div><span class="mode">${escapeHtml(p.mode||p.name+" Mode")}</span>`;
+  document.getElementById("profileGamesTitle").textContent=`${p.mode||p.name+" Mode"} — Love / Hate Games`;
+  document.getElementById("teamTags").innerHTML=[...p.love.map(t=>`<span class="team love">❤️ ${escapeHtml(t)}</span>`),...p.hate.map(t=>`<span class="team hate">😈 ${escapeHtml(t)}</span>`)].join("")||`<span class="team">Love / Hate team setup comes next</span>`;
+  renderProfileGames();
+}
+function addProfile(){
+  const input=document.getElementById("profileName");const name=input.value.trim();if(!name)return input.focus();
+  const id=`p-${Date.now()}`;profiles.push({id,name,mode:`${name} Mode`,love:[],hate:[]});activeId=id;input.value="";saveProfiles();renderProfiles();
+}
+function isTv(game){return Array.isArray(game.directv)&&game.directv.some(x=>x&&x.directvChannel)}
+function gameText(game){return `${game.away||""} ${game.home||""} ${game.name||""}`.toLowerCase()}
+function classify(game,p){const text=gameText(game);if(p.love.some(t=>text.includes(t.toLowerCase())))return"love";if(p.hate.some(t=>text.includes(t.toLowerCase())))return"hate";return null}
+function formatTime(v){if(!v)return"Time TBA";const d=new Date(v);if(isNaN(d))return v;return d.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}
+function renderProfileGames(){
+  const box=document.getElementById("profileGames"),p=activeProfile();if(!allGames.length){box.innerHTML=`<div class="empty">Profile matches will appear here when today's games finish loading.</div>`;document.getElementById("profileCount").textContent="—";return}
+  const matches=allGames.map(x=>({...x,kind:classify(x.game,p)})).filter(x=>x.kind);
+  document.getElementById("profileCount").textContent=matches.length;
+  if(!matches.length){box.innerHTML=`<div class="empty">No Love / Hate team games found in today's connected feeds.</div>`;return}
+  box.innerHTML=matches.slice(0,6).map(({sport,game,kind})=>`<div class="match ${kind}"><div class="match-head"><span class="match-title">${escapeHtml(game.away||"")} ${game.away&&game.home?"@":""} ${escapeHtml(game.home||game.name||"Event")}</span><span class="badge">${kind==="love"?"❤️ LOVE GAME":"😈 HATE WATCH"}</span></div><div class="match-detail">${escapeHtml(sport.name)} • ${formatTime(game.startTime)} • ${escapeHtml(game.broadcast||game.network||"Broadcast info pending")}</div></div>`).join("");
+}
+async function loadSportsDay(){
+  const today=new Date();const y=today.getFullYear(),m=String(today.getMonth()+1).padStart(2,"0"),d=String(today.getDate()).padStart(2,"0"),date=`${y}-${m}-${d}`;
+  document.getElementById("todayDate").textContent=today.toLocaleDateString([], {weekday:"long",month:"long",day:"numeric"});
+  const results=await Promise.all(sports.map(async sport=>{try{const r=await fetch(`${API_BASE}/resolve?sport=${sport.id}&date=${date}&provider=directv`);if(!r.ok)throw 0;const data=await r.json();return{sport,games:Array.isArray(data.games)?data.games:[],ok:true}}catch{return{sport,games:[],ok:false}}}));
+  allGames=results.flatMap(r=>r.games.map(game=>({sport:r.sport,game})));
+  const total=allGames.length,tv=allGames.filter(x=>isTv(x.game)).length,failed=results.filter(x=>!x.ok).length;
+  document.getElementById("totalEvents").textContent=failed===results.length?"Feed unavailable":`${total} events today`;
+  document.getElementById("tvCount").textContent=failed===results.length?"—":tv;
+  document.getElementById("streamCount").textContent=failed===results.length?"—":Math.max(0,total-tv);
+  const rows=results.filter(r=>r.games.length).map(r=>{const tvn=r.games.filter(isTv).length;return `<div class="sport-row"><div class="sport-icon">${r.sport.icon}</div><div><div class="sport-name">${r.sport.name}</div><div class="sport-detail">${tvn} on TV • ${Math.max(0,r.games.length-tvn)} stream / other</div></div><div class="sport-count">${r.games.length}</div></div>`}).join("");
+  document.getElementById("sportsList").innerHTML=rows||`<div class="loading">${failed?"The live service may be waking up. You can still test the profile/setup flow.":"No games found today in the connected feeds."}</div>`;
+  renderProfileGames();
+}
+document.getElementById("addProfile").addEventListener("click",addProfile);
+document.getElementById("profileName").addEventListener("keydown",e=>{if(e.key==="Enter")addProfile()});
+document.getElementById("profileList").addEventListener("click",e=>{const b=e.target.closest("[data-profile]");if(!b)return;activeId=b.dataset.profile;saveProfiles();renderProfiles()});
+document.getElementById("showGames").addEventListener("click",()=>location.href="./");
+loadProfiles();renderProfiles();loadSportsDay();
+</script>
+</body>
+</html>
