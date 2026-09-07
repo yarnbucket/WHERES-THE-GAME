@@ -6,45 +6,14 @@ import { lookupDirectvGame } from "../logic/directvGuide.js";
 const router = express.Router();
 
 const SPORTS = {
-  nfl: {
-    sport: "football",
-    league: "nfl",
-    label: "NFL"
-  },
-
-  ncaaf: {
-    sport: "football",
-    league: "college-football",
-    label: "NCAA Football"
-  },
-
-  mlb: {
-    sport: "baseball",
-    league: "mlb",
-    label: "MLB"
-  },
-
-  nhl: {
-    sport: "hockey",
-    league: "nhl",
-    label: "NHL"
-  },
-
-  nba: {
-    sport: "basketball",
-    league: "nba",
-    label: "NBA"
-  },
-
-  ncaab: {
-    sport: "basketball",
-    league: "mens-college-basketball",
-    label: "NCAA Basketball"
-  }
+  nfl: { sport: "football", league: "nfl", label: "NFL" },
+  ncaaf: { sport: "football", league: "college-football", label: "NCAA Football" },
+  mlb: { sport: "baseball", league: "mlb", label: "MLB" },
+  nhl: { sport: "hockey", league: "nhl", label: "NHL" },
+  nba: { sport: "basketball", league: "nba", label: "NBA" },
+  ncaab: { sport: "basketball", league: "mens-college-basketball", label: "NCAA Basketball" }
 };
 
-// ESPN college-football group IDs.
-// .1b scope: FBS + FCS only.
 const NCAA_GROUPS = [
   { id: "80", division: "FBS" },
   { id: "81", division: "FCS" }
@@ -113,44 +82,20 @@ function normalizeEvent(event, sportLabel, metadata = {}) {
 
   return {
     id: event?.id ?? null,
-
     sport: sportLabel,
-
     name: event?.name ?? null,
-
-    away:
-      awayTeam?.team?.displayName ??
-      "Away",
-
-    home:
-      homeTeam?.team?.displayName ??
-      "Home",
-
-    startTime:
-      event?.date ?? null,
-
-    status:
-      event?.status?.type?.description ??
-      null,
-
-    network:
-      getBroadcast(competition),
-
-    venue:
-      competition?.venue?.fullName ??
-      null,
-
-    // .1b NCAA metadata foundation.
-    division:
-      metadata.division ?? null,
-
+    away: awayTeam?.team?.displayName ?? "Away",
+    home: homeTeam?.team?.displayName ?? "Home",
+    startTime: event?.date ?? null,
+    status: event?.status?.type?.description ?? null,
+    network: getBroadcast(competition),
+    venue: competition?.venue?.fullName ?? null,
+    division: metadata.division ?? null,
     conferences: {
       away: awayConference,
       home: homeConference
     },
-
-    conferenceIds:
-      [...new Set(conferenceIds)]
+    conferenceIds: [...new Set(conferenceIds)]
   };
 }
 
@@ -189,8 +134,6 @@ function dedupeGames(games) {
       continue;
     }
 
-    // If the same ESPN event appears in both group feeds,
-    // prefer FBS for cross-division FBS/FCS matchups.
     const existing = unique.get(key);
 
     if (
@@ -224,7 +167,6 @@ async function getBaseGames(sportKey, config, date) {
     );
   }
 
-  // .1b: collect FBS and FCS independently, then merge.
   const results = await Promise.all(
     NCAA_GROUPS.map(async (group) => {
       const data = await fetchScoreboard(
@@ -249,6 +191,58 @@ async function getBaseGames(sportKey, config, date) {
   );
 }
 
+function applyExactPittsburghRegionalChannel(game, directvGuide) {
+  const guideChannels = directvGuide?.channels;
+
+  if (!Array.isArray(guideChannels)) {
+    return game;
+  }
+
+  const snpChannel = guideChannels.find(
+    (item) =>
+      item?.channel === "659" ||
+      item?.channel === "659-1"
+  );
+
+  if (!snpChannel) {
+    return game;
+  }
+
+  const directv = Array.isArray(game.directv)
+    ? [...game.directv]
+    : [];
+
+  const regionalIndex = directv.findIndex(
+    (item) =>
+      item?.network === "SportsNet Pittsburgh" ||
+      item?.directvChannel === "659"
+  );
+
+  const exactRegional = {
+    source: snpChannel.network,
+    network: snpChannel.network,
+    directvChannel: snpChannel.channel,
+    type: "regional",
+    market: "Pittsburgh",
+    zipProfile: "15220",
+    note:
+      snpChannel.channel === "659-1"
+        ? "SportsNet Pittsburgh Plus / alternate"
+        : "SportsNet Pittsburgh main feed"
+  };
+
+  if (regionalIndex >= 0) {
+    directv[regionalIndex] = exactRegional;
+  } else {
+    directv.unshift(exactRegional);
+  }
+
+  return {
+    ...game,
+    directv
+  };
+}
+
 async function addDirectvGuideData(game, sportKey) {
   if (sportKey !== "mlb") {
     return game;
@@ -262,8 +256,14 @@ async function addDirectvGuideData(game, sportKey) {
       zip: "15220"
     });
 
+    const exactGame =
+      applyExactPittsburghRegionalChannel(
+        game,
+        directvGuide
+      );
+
     return {
-      ...game,
+      ...exactGame,
       directvGuide
     };
   } catch (error) {
