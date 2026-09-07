@@ -26,6 +26,63 @@ function normalize(value) {
     .trim();
 }
 
+function escapeRegex(value) {
+  return String(value ?? "")
+    .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function teamAliases(teamName) {
+  const normalized = normalize(teamName);
+  const words = normalized.split(" ").filter(Boolean);
+  const aliases = new Set();
+
+  if (normalized) {
+    aliases.add(normalized);
+  }
+
+  // Common nickname endings help when DIRECTV abbreviates the city
+  // differently from ESPN (example: Los Angeles Angels vs LA Angels).
+  if (words.length >= 2) {
+    aliases.add(words.slice(-2).join(" "));
+  }
+
+  if (words.length >= 1) {
+    aliases.add(words.slice(-1).join(" "));
+  }
+
+  return [...aliases]
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length);
+}
+
+function findMatchupIndex(text, away, home) {
+  const awayAliases = teamAliases(away);
+  const homeAliases = teamAliases(home);
+
+  for (const awayAlias of awayAliases) {
+    for (const homeAlias of homeAliases) {
+      const awayPattern =
+        escapeRegex(awayAlias).replace(/\s+/g, "\\s+");
+
+      const homePattern =
+        escapeRegex(homeAlias).replace(/\s+/g, "\\s+");
+
+      const regex = new RegExp(
+        `${awayPattern}\\s+(?:at|@|vs\\.?|versus)\\s+${homePattern}`,
+        "i"
+      );
+
+      const match = regex.exec(text);
+
+      if (match) {
+        return match.index;
+      }
+    }
+  }
+
+  return -1;
+}
+
 function extractChannels(section) {
   const results = [];
 
@@ -38,7 +95,7 @@ function extractChannels(section) {
     const channel = match[1];
     const baseNumber = Number(channel.split("-")[0]);
 
-    // MLB Extra Innings game channels
+    // MLB Extra Innings individual game feeds.
     if (baseNumber < 721 || baseNumber > 749) {
       continue;
     }
@@ -108,16 +165,19 @@ export async function lookupDirectvGame({
     const text =
       cleanHtml(html);
 
-    const normalizedText =
-      normalize(text);
-
-    const matchup =
-      normalize(
-        `${away} at ${home}`
-      );
-
+    /*
+     * Search the actual cleaned DIRECTV text so the index used
+     * for slicing stays aligned with the same string.
+     *
+     * Also accept shortened team-name variants. This fixes cases
+     * such as ESPN "Los Angeles Angels" vs DIRECTV "LA Angels".
+     */
     const matchupIndex =
-      normalizedText.indexOf(matchup);
+      findMatchupIndex(
+        text,
+        away,
+        home
+      );
 
     if (matchupIndex < 0) {
       console.log(
@@ -133,13 +193,14 @@ export async function lookupDirectvGame({
     }
 
     /*
-     * The channel information appears immediately
-     * after the matchup on DIRECTV's schedule.
+     * DIRECTV places the feed/channel data immediately after
+     * the matchup. Keep the window tight enough to avoid
+     * accidentally collecting channels from later games.
      */
     const section =
       text.slice(
         matchupIndex,
-        matchupIndex + 700
+        matchupIndex + 500
       );
 
     const channels =
