@@ -335,6 +335,7 @@ router.get("/", async (req, res) => {
       sport: sportKey,
       date,
       provider: providerKey,
+      serverTime: new Date().toISOString(),
       count: games.length,
       divisions:
         sportKey === "ncaaf"
