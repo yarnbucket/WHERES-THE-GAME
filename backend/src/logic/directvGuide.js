@@ -36,12 +36,10 @@ function teamAliases(teamName) {
   const words = normalized.split(" ").filter(Boolean);
   const aliases = new Set();
 
-  if (normalized) {
-    aliases.add(normalized);
-  }
+  if (normalized) aliases.add(normalized);
 
-  // Common nickname endings help when DIRECTV abbreviates the city
-  // differently from ESPN (example: Los Angeles Angels vs LA Angels).
+  // Helps when ESPN and DIRECTV use different city formatting,
+  // e.g. "Los Angeles Angels" vs "LA Angels".
   if (words.length >= 2) {
     aliases.add(words.slice(-2).join(" "));
   }
@@ -83,6 +81,33 @@ function findMatchupIndex(text, away, home) {
   return -1;
 }
 
+function channelType(channel) {
+  if (channel === "213") {
+    return {
+      type: "national",
+      network: "MLB Network"
+    };
+  }
+
+  if (channel === "213-1") {
+    return {
+      type: "national",
+      network: "MLB Network Alt"
+    };
+  }
+
+  const baseNumber = Number(channel.split("-")[0]);
+
+  if (baseNumber >= 721 && baseNumber <= 749) {
+    return {
+      type: "package",
+      network: "MLB Extra Innings"
+    };
+  }
+
+  return null;
+}
+
 function extractChannels(section) {
   const results = [];
 
@@ -93,10 +118,11 @@ function extractChannels(section) {
 
   while ((match = regex.exec(section)) !== null) {
     const channel = match[1];
-    const baseNumber = Number(channel.split("-")[0]);
+    const metadata = channelType(channel);
 
-    // MLB Extra Innings individual game feeds.
-    if (baseNumber < 721 || baseNumber > 749) {
+    // For this MLB lookup, only keep verified MLB Network
+    // channels and individual Extra Innings feeds.
+    if (!metadata) {
       continue;
     }
 
@@ -108,7 +134,9 @@ function extractChannels(section) {
       results.push({
         channel,
         hd: Boolean(match[2]),
-        feed: match[3]?.trim() ?? null
+        feed: match[3]?.trim() ?? null,
+        type: metadata.type,
+        network: metadata.network
       });
     }
   }
@@ -166,11 +194,8 @@ export async function lookupDirectvGame({
       cleanHtml(html);
 
     /*
-     * Search the actual cleaned DIRECTV text so the index used
-     * for slicing stays aligned with the same string.
-     *
-     * Also accept shortened team-name variants. This fixes cases
-     * such as ESPN "Los Angeles Angels" vs DIRECTV "LA Angels".
+     * Search and slice the same cleaned string so indexes stay aligned.
+     * Alias matching handles ESPN/DIRECTV naming differences.
      */
     const matchupIndex =
       findMatchupIndex(
@@ -193,9 +218,8 @@ export async function lookupDirectvGame({
     }
 
     /*
-     * DIRECTV places the feed/channel data immediately after
-     * the matchup. Keep the window tight enough to avoid
-     * accidentally collecting channels from later games.
+     * DIRECTV places channel data immediately after the matchup.
+     * Keep the window tight enough to avoid channels from later games.
      */
     const section =
       text.slice(
@@ -223,7 +247,8 @@ export async function lookupDirectvGame({
       provider: "DIRECTV",
       package: "MLB Extra Innings",
       channels,
-      source: "DIRECTV Sports Guide"
+      source: "DIRECTV Sports Guide",
+      zip
     };
 
   } catch (error) {
