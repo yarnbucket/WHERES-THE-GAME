@@ -43,6 +43,13 @@ const SPORTS = {
   }
 };
 
+// ESPN college-football group IDs.
+// .1b scope: FBS + FCS only.
+const NCAA_GROUPS = [
+  { id: "80", division: "FBS" },
+  { id: "81", division: "FCS" }
+];
+
 function normalizeDate(value) {
   if (!value) {
     return new Date()
@@ -66,9 +73,26 @@ function getBroadcast(competition) {
   return [...new Set(names)].join(", ");
 }
 
-function normalizeEvent(event, sportLabel) {
-  const competition = event?.competitions?.[0];
+function getConferenceTag(competitor) {
+  const id =
+    competitor?.team?.conferenceId ??
+    competitor?.conferenceId ??
+    null;
 
+  const name =
+    competitor?.team?.conference?.name ??
+    competitor?.conference?.name ??
+    competitor?.team?.conferenceName ??
+    null;
+
+  return {
+    id: id == null ? null : String(id),
+    name: name || null
+  };
+}
+
+function normalizeEvent(event, sportLabel, metadata = {}) {
+  const competition = event?.competitions?.[0];
   const competitors = competition?.competitors ?? [];
 
   const homeTeam = competitors.find(
@@ -78,6 +102,14 @@ function normalizeEvent(event, sportLabel) {
   const awayTeam = competitors.find(
     (team) => team.homeAway === "away"
   );
+
+  const homeConference = getConferenceTag(homeTeam);
+  const awayConference = getConferenceTag(awayTeam);
+
+  const conferenceIds = [
+    awayConference.id,
+    homeConference.id
+  ].filter(Boolean);
 
   return {
     id: event?.id ?? null,
@@ -106,8 +138,115 @@ function normalizeEvent(event, sportLabel) {
 
     venue:
       competition?.venue?.fullName ??
-      null
+      null,
+
+    // .1b NCAA metadata foundation.
+    division:
+      metadata.division ?? null,
+
+    conferences: {
+      away: awayConference,
+      home: homeConference
+    },
+
+    conferenceIds:
+      [...new Set(conferenceIds)]
   };
+}
+
+async function fetchScoreboard(config, date, groupId = null) {
+  let url =
+    `https://site.api.espn.com/apis/site/v2/sports/` +
+    `${config.sport}/` +
+    `${config.league}/scoreboard` +
+    `?dates=${date}`;
+
+  if (groupId) {
+    url += `&groups=${groupId}&limit=500`;
+  }
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(
+      `ESPN request failed: ${response.status}`
+    );
+  }
+
+  return response.json();
+}
+
+function dedupeGames(games) {
+  const unique = new Map();
+
+  for (const game of games) {
+    const key =
+      game.id ??
+      `${game.away}|${game.home}|${game.startTime}`;
+
+    if (!unique.has(key)) {
+      unique.set(key, game);
+      continue;
+    }
+
+    // If the same ESPN event appears in both group feeds,
+    // prefer FBS for cross-division FBS/FCS matchups.
+    const existing = unique.get(key);
+
+    if (
+      existing?.division === "FCS" &&
+      game?.division === "FBS"
+    ) {
+      unique.set(key, game);
+    }
+  }
+
+  return [...unique.values()].sort((a, b) => {
+    const aTime = new Date(a.startTime ?? 0).getTime();
+    const bTime = new Date(b.startTime ?? 0).getTime();
+    return aTime - bTime;
+  });
+}
+
+async function getBaseGames(sportKey, config, date) {
+  if (sportKey !== "ncaaf") {
+    const data = await fetchScoreboard(
+      config,
+      date
+    );
+
+    return (data.events ?? []).map(
+      (event) =>
+        normalizeEvent(
+          event,
+          config.label
+        )
+    );
+  }
+
+  // .1b: collect FBS and FCS independently, then merge.
+  const results = await Promise.all(
+    NCAA_GROUPS.map(async (group) => {
+      const data = await fetchScoreboard(
+        config,
+        date,
+        group.id
+      );
+
+      return (data.events ?? []).map(
+        (event) =>
+          normalizeEvent(
+            event,
+            config.label,
+            { division: group.division }
+          )
+      );
+    })
+  );
+
+  return dedupeGames(
+    results.flat()
+  );
 }
 
 async function addDirectvGuideData(game, sportKey) {
@@ -166,29 +305,11 @@ router.get("/", async (req, res) => {
     .toLowerCase()
     .trim();
 
-  const url =
-    `https://site.api.espn.com/apis/site/v2/sports/` +
-    `${config.sport}/` +
-    `${config.league}/scoreboard` +
-    `?dates=${date}`;
-
   try {
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(
-        `ESPN request failed: ${response.status}`
-      );
-    }
-
-    const data = await response.json();
-
-    const baseGames = (data.events ?? []).map(
-      (event) =>
-        normalizeEvent(
-          event,
-          config.label
-        )
+    const baseGames = await getBaseGames(
+      sportKey,
+      config,
+      date
     );
 
     const resolvedGames = baseGames.map(
@@ -215,6 +336,10 @@ router.get("/", async (req, res) => {
       date,
       provider: providerKey,
       count: games.length,
+      divisions:
+        sportKey === "ncaaf"
+          ? ["FBS", "FCS"]
+          : undefined,
       games
     });
 
