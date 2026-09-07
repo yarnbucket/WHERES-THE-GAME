@@ -38,8 +38,6 @@ function teamAliases(teamName) {
 
   if (normalized) aliases.add(normalized);
 
-  // Helps when ESPN and DIRECTV use different city formatting,
-  // e.g. "Los Angeles Angels" vs "LA Angels".
   if (words.length >= 2) {
     aliases.add(words.slice(-2).join(" "));
   }
@@ -96,6 +94,20 @@ function channelType(channel) {
     };
   }
 
+  if (channel === "659") {
+    return {
+      type: "regional",
+      network: "SportsNet Pittsburgh"
+    };
+  }
+
+  if (channel === "659-1") {
+    return {
+      type: "regional",
+      network: "SportsNet Pittsburgh Plus"
+    };
+  }
+
   const baseNumber = Number(channel.split("-")[0]);
 
   if (baseNumber >= 721 && baseNumber <= 749) {
@@ -120,17 +132,11 @@ function extractChannels(section) {
     const channel = match[1];
     const metadata = channelType(channel);
 
-    // For this MLB lookup, only keep verified MLB Network
-    // channels and individual Extra Innings feeds.
     if (!metadata) {
       continue;
     }
 
-    if (
-      !results.some(
-        (item) => item.channel === channel
-      )
-    ) {
+    if (!results.some((item) => item.channel === channel)) {
       results.push({
         channel,
         hd: Boolean(match[2]),
@@ -187,16 +193,9 @@ export async function lookupDirectvGame({
       return null;
     }
 
-    const html =
-      await response.text();
+    const html = await response.text();
+    const text = cleanHtml(html);
 
-    const text =
-      cleanHtml(html);
-
-    /*
-     * Search and slice the same cleaned string so indexes stay aligned.
-     * Alias matching handles ESPN/DIRECTV naming differences.
-     */
     const matchupIndex =
       findMatchupIndex(
         text,
@@ -209,18 +208,9 @@ export async function lookupDirectvGame({
         `DIRECTV matchup not found: ${away} at ${home}`
       );
 
-      console.log(
-        "DIRECTV page sample:",
-        text.slice(0, 500)
-      );
-
       return null;
     }
 
-    /*
-     * DIRECTV places channel data immediately after the matchup.
-     * Keep the window tight enough to avoid channels from later games.
-     */
     const section =
       text.slice(
         matchupIndex,
@@ -235,17 +225,15 @@ export async function lookupDirectvGame({
         `DIRECTV matchup found but channel not found: ${away} at ${home}`
       );
 
-      console.log(
-        "DIRECTV section:",
-        section
-      );
-
       return null;
     }
 
     return {
       provider: "DIRECTV",
-      package: "MLB Extra Innings",
+      package:
+        channels.some((item) => item.type === "package")
+          ? "MLB Extra Innings"
+          : null,
       channels,
       source: "DIRECTV Sports Guide",
       zip
