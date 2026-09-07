@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Where's the Game?</title>
-  <!-- WTG 0.1C: all-sports framework + WNBA + Racing live schedule support -->
+  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links -->
   <style>
     :root{--bg:#f5f8fc;--card:#fff;--ink:#0b1b3a;--muted:#60708d;--blue:#1769e8;--blue2:#e8f2ff;--line:#dce5f0;--shadow:0 8px 24px rgba(23,55,99,.08);--warn:#fff3cd;--warn-ink:#765800;--ok:#eaf8ef;--ok-ink:#166534}
     *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
@@ -64,33 +64,43 @@ const EASTERN_TZ="America/New_York";
 const SPORT_CATALOG=[
   {id:"nfl",tab:"NFL",label:"NFL",group:"Football",live:true,defaultOn:true},
   {id:"ncaaf",tab:"NCAAF",label:"NCAA Football",group:"Football",live:true,defaultOn:true},
+  {id:"otherfootball",tab:"Other Football",label:"Other Football",group:"Football",live:true,defaultOn:true},
   {id:"mlb",tab:"MLB",label:"MLB",group:"Baseball",live:true,defaultOn:true},
   {id:"nhl",tab:"NHL",label:"NHL",group:"Hockey",live:true,defaultOn:true},
+  {id:"collegehockey",tab:"College Hockey",label:"College Hockey",group:"Hockey",live:true,defaultOn:true},
   {id:"nba",tab:"NBA",label:"NBA",group:"Basketball",live:true,defaultOn:true},
   {id:"ncaab",tab:"NCAAB",label:"NCAA Basketball",group:"Basketball",live:true,defaultOn:true},
+  {id:"ncaaw",tab:"NCAAW",label:"NCAA Women's Basketball",group:"Basketball",live:true,defaultOn:true},
   {id:"wnba",tab:"WNBA",label:"WNBA",group:"Basketball",live:true,defaultOn:true},
   {id:"racing",tab:"Racing",label:"Racing",group:"Motorsports",live:true,defaultOn:true},
-  {id:"golf",tab:"Golf",label:"Golf",group:"Golf",live:false,defaultOn:true},
-  {id:"tennis",tab:"Tennis",label:"Tennis",group:"Tennis",live:false,defaultOn:true},
-  {id:"soccer",tab:"Soccer",label:"Soccer",group:"Soccer",live:false,defaultOn:true},
-  {id:"mma",tab:"MMA/UFC",label:"MMA / UFC",group:"Combat",live:false,defaultOn:true},
+  {id:"golf",tab:"Golf",label:"Golf",group:"Golf",live:true,defaultOn:true},
+  {id:"tennis",tab:"Tennis",label:"Tennis",group:"Tennis",live:true,defaultOn:true},
+  {id:"soccer",tab:"Soccer",label:"Soccer",group:"Soccer",live:true,defaultOn:true},
+  {id:"collegesoccer",tab:"College Soccer",label:"College Soccer",group:"Soccer",live:true,defaultOn:true},
+  {id:"mma",tab:"MMA/UFC",label:"MMA / UFC",group:"Combat",live:true,defaultOn:true},
   {id:"boxing",tab:"Boxing",label:"Boxing",group:"Combat",live:false,defaultOn:true},
-  {id:"cbaseball",tab:"College Baseball",label:"College Baseball",group:"Baseball",live:false,defaultOn:true},
-  {id:"softball",tab:"Softball",label:"College Softball",group:"Softball",live:false,defaultOn:true},
-  {id:"lacrosse",tab:"Lacrosse",label:"Lacrosse",group:"Field Sports",live:false,defaultOn:true},
-  {id:"volleyball",tab:"Volleyball",label:"Volleyball",group:"Court Sports",live:false,defaultOn:true},
-  {id:"rugby",tab:"Rugby",label:"Rugby",group:"Field Sports",live:false,defaultOn:true},
-  {id:"cricket",tab:"Cricket",label:"Cricket",group:"Bat & Ball",live:false,defaultOn:true},
+  {id:"cbaseball",tab:"College Baseball",label:"College Baseball",group:"Baseball",live:true,defaultOn:true},
+  {id:"softball",tab:"Softball",label:"College Softball",group:"Softball",live:true,defaultOn:true},
+  {id:"lacrosse",tab:"Lacrosse",label:"Lacrosse",group:"Field Sports",live:true,defaultOn:true},
+  {id:"volleyball",tab:"Volleyball",label:"Volleyball",group:"Court Sports",live:true,defaultOn:true},
+  {id:"collegevolleyball",tab:"College Volleyball",label:"College Volleyball",group:"Court Sports",live:true,defaultOn:true},
+  {id:"rugby",tab:"Rugby",label:"Rugby",group:"Field Sports",live:true,defaultOn:true},
+  {id:"rugbyleague",tab:"Rugby League",label:"Rugby League",group:"Field Sports",live:true,defaultOn:true},
+  {id:"australianfootball",tab:"Aussie Rules",label:"Australian Football",group:"Field Sports",live:true,defaultOn:true},
+  {id:"cricket",tab:"Cricket",label:"Cricket",group:"Bat & Ball",live:true,defaultOn:true},
   {id:"horseracing",tab:"Horse Racing",label:"Horse Racing",group:"Racing",live:false,defaultOn:true},
   {id:"cycling",tab:"Cycling",label:"Cycling",group:"Racing",live:false,defaultOn:true},
   {id:"track",tab:"Track & Field",label:"Track & Field",group:"Olympic",live:false,defaultOn:true},
   {id:"swimming",tab:"Swimming",label:"Swimming / Diving",group:"Olympic",live:false,defaultOn:true},
   {id:"gymnastics",tab:"Gymnastics",label:"Gymnastics",group:"Olympic",live:false,defaultOn:true},
-  {id:"wrestling",tab:"Wrestling",label:"Wrestling",group:"Combat",live:false,defaultOn:true},
-  {id:"otherhockey",tab:"Other Hockey",label:"Other Hockey",group:"Hockey",live:false,defaultOn:true},
-  {id:"otherbasketball",tab:"Other Basketball",label:"Other Basketball",group:"Basketball",live:false,defaultOn:true},
-  {id:"otherbaseball",tab:"Other Baseball",label:"Other Baseball",group:"Baseball",live:false,defaultOn:true},
-  {id:"olympics",tab:"Olympics",label:"Olympics / Major Events",group:"Multi-sport",live:false,defaultOn:true}
+  {id:"wrestling",tab:"College Wrestling",label:"College Wrestling",group:"Combat",live:false,defaultOn:true,sourceLabel:"NCAA Wrestling",sourceUrl:"https://www.ncaa.com/sports/wrestling-men/d1"},
+  {id:"prowrestling",tab:"Pro Wrestling",label:"Pro Wrestling / WWE",group:"Combat",live:false,defaultOn:true,sourceLabel:"WWE Schedule",sourceUrl:"https://www.wwe.com/article/wwe-upcoming-events"},
+  {id:"otherhockey",tab:"Other Hockey",label:"Other Hockey",group:"Hockey",live:true,defaultOn:true},
+  {id:"fieldhockey",tab:"Field Hockey",label:"Field Hockey",group:"Field Sports",live:true,defaultOn:true},
+  {id:"waterpolo",tab:"Water Polo",label:"Water Polo",group:"Aquatics",live:true,defaultOn:true},
+  {id:"otherbasketball",tab:"Other Basketball",label:"Other Basketball",group:"Basketball",live:true,defaultOn:true},
+  {id:"otherbaseball",tab:"Other Baseball",label:"Other Baseball",group:"Baseball",live:true,defaultOn:true},
+  {id:"olympics",tab:"Olympics",label:"Olympics / Major Events",group:"Multi-sport",live:true,defaultOn:true}
 ];
 const sportLabels=Object.fromEntries(SPORT_CATALOG.map(s=>[s.id,s.label]));
 const SPORT_PREFS_KEY="wtg-visible-sports-v1";
@@ -263,7 +273,15 @@ function renderGame(game,conflictKeys){const d=getDirectvDisplay(game,conflictKe
 function renderGames(games){const conflictKeys=directvNationalConflictKeys(games);gamesList.innerHTML=games.map(game=>renderGame(game,conflictKeys)).join("");updateDateMeta()}
 function setStatus(text,waking=false){statusBox.textContent=text;statusBox.className=waking?"status waking":"status";statusBox.style.display="block"}
 function hideStatus(){statusBox.style.display="none"}
-async function loadGames(){favoritesOnly=false;updateDateMeta();todayNav.classList.add("active");favoritesNav.classList.remove("active");dateLabel.textContent=formatDate(selectedDate);scheduleTitle.textContent=`${sportLabels[selectedSport]} Games`;gamesList.innerHTML="";const sportMeta=SPORT_CATALOG.find(s=>s.id===selectedSport);if(!sportMeta?.live){setStatus(`${sportMeta?.label||"This sport"} is enabled in 0.1C. Its live schedule and channel feed is the next data connection step.`);return}setStatus("Loading live games... If the free backend was asleep, this can take up to about a minute.",true);try{const date=toApiDate(selectedDate);const response=await fetch(`${API_BASE}/resolve?sport=${selectedSport}&date=${date}&provider=directv`);if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json();syncServerTime(data.serverTime);currentGames=Array.isArray(data.games)?data.games:[];scheduleTitle.textContent=`${sportLabels[selectedSport]} Games (${currentGames.length})`;if(!currentGames.length){setStatus("No games found for this sport and date.");return}hideStatus();renderGames(currentGames)}catch(error){console.error(error);setStatus("Could not load live games. The backend may still be waking up; refresh in a moment.")}}
+async function loadGames(){favoritesOnly=false;updateDateMeta();todayNav.classList.add("active");favoritesNav.classList.remove("active");dateLabel.textContent=formatDate(selectedDate);scheduleTitle.textContent=`${sportLabels[selectedSport]} Games`;gamesList.innerHTML="";const sportMeta=SPORT_CATALOG.find(s=>s.id===selectedSport);if(!sportMeta?.live){
+  if(sportMeta?.sourceUrl){
+    hideStatus();
+    gamesList.innerHTML=`<article class="game-card"><div class="game-info"><div class="game-title-row"><h3 class="game-name">${sportMeta.label}</h3></div><p class="game-network">Live in-app schedule feed is not connected yet.</p><p class="game-venue">Use the verified source below for current schedule information.</p><p style="margin-top:14px"><a href="${sportMeta.sourceUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 14px;border-radius:10px;background:#111827;color:#fff;text-decoration:none;font-weight:700">${sportMeta.sourceLabel||"Open Official Schedule"} ↗</a></p></div></article>`;
+    return
+  }
+  setStatus(`${sportMeta?.label||"This sport"} is enabled in 0.1C. Its live schedule and channel feed is the next data connection step.`);
+  return
+}setStatus("Loading live games... If the free backend was asleep, this can take up to about a minute.",true);try{const date=toApiDate(selectedDate);const response=await fetch(`${API_BASE}/resolve?sport=${selectedSport}&date=${date}&provider=directv`);if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json();syncServerTime(data.serverTime);currentGames=Array.isArray(data.games)?data.games:[];scheduleTitle.textContent=`${sportLabels[selectedSport]} Games (${currentGames.length})`;if(!currentGames.length){setStatus("No games found for this sport and date.");return}hideStatus();renderGames(currentGames)}catch(error){console.error(error);setStatus("Could not load live games. The backend may still be waking up; refresh in a moment.")}}
 function loadFavorites(){favoritesOnly=true;updateDateMeta();todayNav.classList.remove("active");favoritesNav.classList.add("active");const favs=getFavorites();currentGames=favs;dateLabel.textContent="Favorites";scheduleTitle.textContent=`Favorite Games (${favs.length})`;if(!favs.length){gamesList.innerHTML="";setStatus("No favorite games yet. Tap ☆ on a game to save it.");return}hideStatus();renderGames(favs)}
 sportTabs.addEventListener("click",event=>{const button=event.target.closest("button[data-sport]");if(!button)return;selectedSport=button.dataset.sport;renderSportTabs();loadGames()});
 document.querySelector(".gear").addEventListener("click",openSettings);
@@ -271,7 +289,7 @@ document.getElementById("settingsClose").addEventListener("click",closeSettings)
 settingsBackdrop.addEventListener("click",event=>{if(event.target===settingsBackdrop)closeSettings()});
 sportsSettings.addEventListener("change",applySportsSettings);
 document.getElementById("showAllSports").addEventListener("click",()=>{saveVisibleSportIds(SPORT_CATALOG.map(s=>s.id));renderSportsSettings();renderSportTabs()});
-document.getElementById("coreSportsOnly").addEventListener("click",()=>{saveVisibleSportIds(["nfl","ncaaf","mlb","nhl","nba","ncaab","wnba","racing","golf","tennis","soccer"]);renderSportsSettings();renderSportTabs();if(!getVisibleSportIds().includes(selectedSport))selectedSport="mlb";loadGames()});
+document.getElementById("coreSportsOnly").addEventListener("click",()=>{saveVisibleSportIds(["nfl","ncaaf","mlb","nhl","collegehockey","nba","ncaab","ncaaw","wnba","racing","golf","tennis","soccer","collegesoccer"]);renderSportsSettings();renderSportTabs();if(!getVisibleSportIds().includes(selectedSport))selectedSport="mlb";loadGames()});
 document.getElementById("prevDay").addEventListener("click",()=>{selectedDate.setDate(selectedDate.getDate()-1);selectedDate=new Date(selectedDate);loadGames()});
 document.getElementById("nextDay").addEventListener("click",()=>{selectedDate.setDate(selectedDate.getDate()+1);selectedDate=new Date(selectedDate);loadGames()});
 document.getElementById("todayBtn").addEventListener("click",()=>{selectedDate=new Date();loadGames()});
