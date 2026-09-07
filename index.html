@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Where's the Game?</title>
-  <!-- WTG 0.1Ba: resolve simultaneous duplicate DIRECTV primary channels -->
+  <!-- WTG 0.1Ba: prefer dedicated MLB Extra Innings feed over shared MLB Network 213/213-1 -->
   <style>
     :root{--bg:#f5f8fc;--card:#fff;--ink:#0b1b3a;--muted:#60708d;--blue:#1769e8;--blue2:#e8f2ff;--line:#dce5f0;--shadow:0 8px 24px rgba(23,55,99,.08);--warn:#fff3cd;--warn-ink:#765800;--ok:#eaf8ef;--ok-ink:#166534}
     *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
@@ -134,16 +134,13 @@ function getDirectvDisplay(game,conflictKeys=new Set()){
   const national=options.find(x=>x?.directvChannel&&x?.type==="national");
   const guide=Array.isArray(game?.directvGuide?.channels)?game.directvGuide.channels:[];
 
-  if(national&&game?.startTime){
-    const key=`${game.startTime}|${national.directvChannel}`;
-    if(conflictKeys.has(key)){
-      const dedicatedFeed=guide.find(x=>x?.channel&&x?.type==="package");
-      if(dedicatedFeed){
-        return{
-          channel:`${dedicatedFeed.channel}${dedicatedFeed.hd?" HD":""}`,
-          note:dedicatedFeed.feed||dedicatedFeed.network||"MLB Extra Innings"
-        };
-      }
+  if(national&&["213","213-1"].includes(String(national.directvChannel))){
+    const dedicatedFeed=guide.find(x=>x?.channel&&x?.type==="package");
+    if(dedicatedFeed){
+      return{
+        channel:`${dedicatedFeed.channel}${dedicatedFeed.hd?" HD":""}`,
+        note:dedicatedFeed.feed||dedicatedFeed.network||"MLB Extra Innings"
+      };
     }
   }
 
