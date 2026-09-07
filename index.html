@@ -33,6 +33,12 @@
   </div>
 
   <div class="section-head"><h2 id="scheduleTitle">MLB Games</h2><div class="live-pill">LIVE DATA</div></div>
+  <div class="time-filters" id="timeFilters">
+    <button class="time-filter active" data-time-filter="all">ALL DAY <span class="count" id="countAll"></span></button>
+    <button class="time-filter" data-time-filter="now">NOW <span class="count" id="countNow"></span></button>
+    <button class="time-filter" data-time-filter="upcoming">UPCOMING <span class="count" id="countUpcoming"></span></button>
+    <button class="time-filter" data-time-filter="final">FINAL <span class="count" id="countFinal"></span></button>
+  </div>
   <div id="status" class="status waking">Connecting to live sports service...</div>
   <main class="games" id="gamesList"></main>
 </div>
@@ -40,9 +46,10 @@
 <nav class="bottom-nav"><button id="todayNav" class="active">📅 Today</button><button id="favoritesNav">★ Favorites</button></nav>
 
 <script>
+// WHERE'S THE GAME revision .1a — Time/Status filter foundation
 const API_BASE="https://wheres-the-game.onrender.com";
 const sportLabels={nfl:"NFL",ncaaf:"NCAA Football",mlb:"MLB",nhl:"NHL",nba:"NBA",ncaab:"NCAA Basketball"};
-let selectedSport="mlb", selectedDate=new Date(), favoritesOnly=false, currentGames=[];
+let selectedSport="mlb", selectedDate=new Date(), favoritesOnly=false, currentGames=[], timeFilter="all";
 const gamesList=document.getElementById("gamesList"), statusBox=document.getElementById("status"), scheduleTitle=document.getElementById("scheduleTitle"), dateLabel=document.getElementById("dateLabel"), todayNav=document.getElementById("todayNav"), favoritesNav=document.getElementById("favoritesNav");
 function toApiDate(date){
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -63,15 +70,62 @@ function formatTime(value){if(!value)return"TBD";return new Date(value).toLocale
 function getFavorites(){try{const x=JSON.parse(localStorage.getItem("wtg-live-favorites")||"[]");return Array.isArray(x)?x:[]}catch{return[]}}
 function saveFavorites(items){localStorage.setItem("wtg-live-favorites",JSON.stringify(items))}
 function isFavorite(id){return getFavorites().some(item=>String(item.id)===String(id))}
-function toggleFavorite(game){const favs=getFavorites(), exists=favs.some(item=>String(item.id)===String(game.id));saveFavorites(exists?favs.filter(item=>String(item.id)!==String(game.id)):[...favs,game]);favoritesOnly?loadFavorites():renderGames(currentGames)}
+function toggleFavorite(game){const favs=getFavorites(), exists=favs.some(item=>String(item.id)===String(game.id));saveFavorites(exists?favs.filter(item=>String(item.id)!==String(game.id)):[...favs,game]);favoritesOnly?loadFavorites():applyTimeFilter()}
 function getDirectvDisplay(game){const options=Array.isArray(game.directv)?game.directv:[];const national=options.find(x=>x?.directvChannel&&x?.type==="national");if(national)return{channel:national.directvChannel,note:national.network||"National"};const local=options.find(x=>x?.directvChannel&&x?.type==="local");if(local)return{channel:local.directvChannel,note:local.station?`${local.station} • ${local.network||""}`:(local.network||"Local")};const regional=options.find(x=>x?.directvChannel&&x?.type==="regional");if(regional)return{channel:regional.directvChannel,note:regional.network||"Regional"};const guide=game?.directvGuide?.channels;if(Array.isArray(guide)&&guide.length){const first=guide[0];return{channel:`${first.channel}${first.hd?" HD":""}`,note:first.feed||game?.directvGuide?.package||"DIRECTV Sports Guide"}}const pkg=game?.leaguePackage;if(pkg?.name&&pkg?.channelRange)return{channel:pkg.channelRange,note:pkg.name};return{channel:"TBD",note:"Channel lookup pending"}}
+function gameState(game){
+  const raw=[
+    game?.status?.type?.state,game?.status?.type?.name,game?.status?.type?.description,
+    game?.status?.state,game?.status?.name,game?.status?.description,
+    game?.state,game?.statusType,game?.statusName,game?.statusText,game?.detail
+  ].filter(Boolean).join(" ").toLowerCase();
+
+  if(/final|complete|completed|post|ended|game over/.test(raw))return "final";
+  if(/in progress|inprogress|live|halftime|intermission|quarter|period|inning|top |bottom |end of|overtime|ot\b/.test(raw))return "now";
+  if(/pre|scheduled|upcoming|not started|preview/.test(raw))return "upcoming";
+
+  const completed=game?.status?.type?.completed ?? game?.completed;
+  if(completed===true)return "final";
+
+  const start=game?.startTime?new Date(game.startTime):null;
+  if(start&&!Number.isNaN(start.getTime())){
+    const now=Date.now();
+    if(start.getTime()>now)return "upcoming";
+    // If the feed gives no status after kickoff, keep the game visible in NOW
+    // for a conservative six-hour window rather than guessing it is final.
+    if(now-start.getTime()<=6*60*60*1000)return "now";
+    return "final";
+  }
+  return "upcoming";
+}
+function filteredGames(){
+  if(timeFilter==="all")return currentGames;
+  return currentGames.filter(game=>gameState(game)===timeFilter);
+}
+function updateTimeCounts(){
+  const counts={all:currentGames.length,now:0,upcoming:0,final:0};
+  currentGames.forEach(game=>{const state=gameState(game);if(counts[state]!==undefined)counts[state]++});
+  document.getElementById("countAll").textContent=`(${counts.all})`;
+  document.getElementById("countNow").textContent=`(${counts.now})`;
+  document.getElementById("countUpcoming").textContent=`(${counts.upcoming})`;
+  document.getElementById("countFinal").textContent=`(${counts.final})`;
+}
+function applyTimeFilter(){
+  document.querySelectorAll(".time-filter").forEach(button=>button.classList.toggle("active",button.dataset.timeFilter===timeFilter));
+  updateTimeCounts();
+  const games=filteredGames();
+  if(!games.length){gamesList.innerHTML="";setStatus(timeFilter==="all"?"No games found for this sport and date.":`No ${timeFilter==="now"?"games are live right now":timeFilter==="upcoming"?"upcoming games":"final games"} for this sport and date.`);return}
+  hideStatus();
+  renderGames(games);
+}
 function renderGame(game){const d=getDirectvDisplay(game),favorite=isFavorite(game.id);return `<article class="game-card"><div><span class="game-sport">${game.sport||sportLabels[selectedSport]}</span><div class="game-title-row"><h3 class="game-name">${game.away||"Away"} @ ${game.home||"Home"}</h3><button class="favorite ${favorite?"active":""}" data-id="${game.id}">${favorite?"★":"☆"}</button></div><p class="game-time">${formatTime(game.startTime)}</p><p class="game-network">${game.broadcast||game.network||"Broadcast information unavailable"}</p><p class="game-venue">${game.venue||""}</p></div><div class="directv-box"><div class="directv-label">DIRECTV</div><div class="directv-channel">${d.channel}</div><div class="directv-note">${d.note}</div></div></article>`}
 function renderGames(games){gamesList.innerHTML=games.map(renderGame).join("")}
 function setStatus(text,waking=false){statusBox.textContent=text;statusBox.className=waking?"status waking":"status";statusBox.style.display="block"}
 function hideStatus(){statusBox.style.display="none"}
-async function loadGames(){favoritesOnly=false;todayNav.classList.add("active");favoritesNav.classList.remove("active");dateLabel.textContent=formatDate(selectedDate);scheduleTitle.textContent=`${sportLabels[selectedSport]} Games`;gamesList.innerHTML="";setStatus("Loading live games... If the free backend was asleep, this can take up to about a minute.",true);try{const date=toApiDate(selectedDate);const response=await fetch(`${API_BASE}/resolve?sport=${selectedSport}&date=${date}&provider=directv`);if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json();currentGames=Array.isArray(data.games)?data.games:[];scheduleTitle.textContent=`${sportLabels[selectedSport]} Games (${currentGames.length})`;if(!currentGames.length){setStatus("No games found for this sport and date.");return}hideStatus();renderGames(currentGames)}catch(error){console.error(error);setStatus("Could not load live games. The backend may still be waking up; refresh in a moment.")}}
-function loadFavorites(){favoritesOnly=true;todayNav.classList.remove("active");favoritesNav.classList.add("active");const favs=getFavorites();currentGames=favs;dateLabel.textContent="Favorites";scheduleTitle.textContent=`Favorite Games (${favs.length})`;if(!favs.length){gamesList.innerHTML="";setStatus("No favorite games yet. Tap ☆ on a game to save it.");return}hideStatus();renderGames(favs)}
-document.querySelectorAll("#sportTabs button").forEach(button=>button.addEventListener("click",()=>{document.querySelectorAll("#sportTabs button").forEach(btn=>btn.classList.remove("active"));button.classList.add("active");selectedSport=button.dataset.sport;loadGames()}));
+async function loadGames(){favoritesOnly=false;document.getElementById("timeFilters").style.display="grid";todayNav.classList.add("active");favoritesNav.classList.remove("active");dateLabel.textContent=formatDate(selectedDate);scheduleTitle.textContent=`${sportLabels[selectedSport]} Games`;gamesList.innerHTML="";setStatus("Loading live games... If the free backend was asleep, this can take up to about a minute.",true);try{const date=toApiDate(selectedDate);const response=await fetch(`${API_BASE}/resolve?sport=${selectedSport}&date=${date}&provider=directv`);if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json();currentGames=Array.isArray(data.games)?data.games:[];scheduleTitle.textContent=`${sportLabels[selectedSport]} Games (${currentGames.length})`;if(!currentGames.length){updateTimeCounts();setStatus("No games found for this sport and date.");return}applyTimeFilter()}catch(error){console.error(error);setStatus("Could not load live games. The backend may still be waking up; refresh in a moment.")}}
+function loadFavorites(){favoritesOnly=true;document.getElementById("timeFilters").style.display="none";todayNav.classList.remove("active");favoritesNav.classList.add("active");const favs=getFavorites();currentGames=favs;dateLabel.textContent="Favorites";scheduleTitle.textContent=`Favorite Games (${favs.length})`;if(!favs.length){gamesList.innerHTML="";setStatus("No favorite games yet. Tap ☆ on a game to save it.");return}hideStatus();renderGames(favs)}
+document.querySelectorAll(".time-filter").forEach(button=>button.addEventListener("click",()=>{timeFilter=button.dataset.timeFilter;applyTimeFilter()}));
+document.querySelectorAll("#sportTabs button").forEach(button=>button.addEventListener("click",()=>{document.querySelectorAll(".time-filter").forEach(button=>button.addEventListener("click",()=>{timeFilter=button.dataset.timeFilter;applyTimeFilter()}));
+document.querySelectorAll("#sportTabs button").forEach(btn=>btn.classList.remove("active"));button.classList.add("active");selectedSport=button.dataset.sport;loadGames()}));
 document.getElementById("prevDay").addEventListener("click",()=>{selectedDate.setDate(selectedDate.getDate()-1);selectedDate=new Date(selectedDate);loadGames()});
 document.getElementById("nextDay").addEventListener("click",()=>{selectedDate.setDate(selectedDate.getDate()+1);selectedDate=new Date(selectedDate);loadGames()});
 document.getElementById("todayBtn").addEventListener("click",()=>{selectedDate=new Date();loadGames()});
