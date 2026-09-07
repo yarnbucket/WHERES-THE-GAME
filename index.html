@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Where's the Game?</title>
-  <!-- WTG 0.1C: all-sports framework + WNBA live schedule support -->
+  <!-- WTG 0.1C: all-sports framework + WNBA + Racing live schedule support -->
   <style>
     :root{--bg:#f5f8fc;--card:#fff;--ink:#0b1b3a;--muted:#60708d;--blue:#1769e8;--blue2:#e8f2ff;--line:#dce5f0;--shadow:0 8px 24px rgba(23,55,99,.08);--warn:#fff3cd;--warn-ink:#765800;--ok:#eaf8ef;--ok-ink:#166534}
     *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
@@ -69,7 +69,7 @@ const SPORT_CATALOG=[
   {id:"nba",tab:"NBA",label:"NBA",group:"Basketball",live:true,defaultOn:true},
   {id:"ncaab",tab:"NCAAB",label:"NCAA Basketball",group:"Basketball",live:true,defaultOn:true},
   {id:"wnba",tab:"WNBA",label:"WNBA",group:"Basketball",live:true,defaultOn:true},
-  {id:"racing",tab:"Racing",label:"Racing",group:"Motorsports",live:false,defaultOn:true},
+  {id:"racing",tab:"Racing",label:"Racing",group:"Motorsports",live:true,defaultOn:true},
   {id:"golf",tab:"Golf",label:"Golf",group:"Golf",live:false,defaultOn:true},
   {id:"tennis",tab:"Tennis",label:"Tennis",group:"Tennis",live:false,defaultOn:true},
   {id:"soccer",tab:"Soccer",label:"Soccer",group:"Soccer",live:false,defaultOn:true},
@@ -259,7 +259,7 @@ function getDirectvDisplay(game,conflictKeys=new Set()){
   return{channel:"TBD",note:"Channel not assigned yet"};
 }
 
-function renderGame(game,conflictKeys){const d=getDirectvDisplay(game,conflictKeys),favorite=isFavorite(game.id);return `<article class="game-card"><div><span class="game-sport">${game.sport||sportLabels[selectedSport]}</span><div class="game-title-row"><h3 class="game-name">${game.away||"Away"} @ ${game.home||"Home"}</h3><button class="favorite ${favorite?"active":""}" data-id="${game.id}">${favorite?"★":"☆"}</button></div><p class="game-time">${formatTime(game.startTime)}</p><p class="game-network">${game.broadcast||game.network||"Broadcast information unavailable"}</p><p class="game-venue">${game.venue||""}</p></div><div class="directv-box"><div class="directv-label">DIRECTV</div><div class="directv-channel">${d.channel}</div><div class="directv-note">${d.note}</div></div></article>`}
+function renderGame(game,conflictKeys){const d=getDirectvDisplay(game,conflictKeys),favorite=isFavorite(game.id);const hasTeams=game.away&&game.home;const eventTitle=hasTeams?`${game.away} @ ${game.home}`:(game.name||"Event");const sportLine=game.series?`${game.sport||sportLabels[selectedSport]} • ${game.series}`:(game.sport||sportLabels[selectedSport]);return `<article class="game-card"><div><span class="game-sport">${sportLine}</span><div class="game-title-row"><h3 class="game-name">${eventTitle}</h3><button class="favorite ${favorite?"active":""}" data-id="${game.id}">${favorite?"★":"☆"}</button></div><p class="game-time">${formatTime(game.startTime)}</p><p class="game-network">${game.broadcast||game.network||"Broadcast information unavailable"}</p><p class="game-venue">${game.venue||""}</p></div><div class="directv-box"><div class="directv-label">DIRECTV</div><div class="directv-channel">${d.channel}</div><div class="directv-note">${d.note}</div></div></article>`}
 function renderGames(games){const conflictKeys=directvNationalConflictKeys(games);gamesList.innerHTML=games.map(game=>renderGame(game,conflictKeys)).join("");updateDateMeta()}
 function setStatus(text,waking=false){statusBox.textContent=text;statusBox.className=waking?"status waking":"status";statusBox.style.display="block"}
 function hideStatus(){statusBox.style.display="none"}
