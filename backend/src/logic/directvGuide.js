@@ -1,5 +1,6 @@
 // DIRECTV live sports guide lookup
 // Where's the Game
+// WTG 0.1Ba: bound each lookup to one matchup to prevent channel bleed.
 
 const DIRECTV_SPORT_IDS = {
   mlb: "61"
@@ -51,7 +52,7 @@ function teamAliases(teamName) {
     .sort((a, b) => b.length - a.length);
 }
 
-function findMatchupIndex(text, away, home) {
+function findMatchup(text, away, home) {
   const awayAliases = teamAliases(away);
   const homeAliases = teamAliases(home);
 
@@ -71,12 +72,31 @@ function findMatchupIndex(text, away, home) {
       const match = regex.exec(text);
 
       if (match) {
-        return match.index;
+        return {
+          index: match.index,
+          end: match.index + match[0].length
+        };
       }
     }
   }
 
-  return -1;
+  return null;
+}
+
+function findNextMatchupIndex(text, startIndex) {
+  const remainder = text.slice(startIndex);
+
+  // DIRECTV's cleaned schedule is a sequence of matchup titles followed by
+  // channel lines. Stop at the next matchup title instead of reading a fixed
+  // number of characters into the next game's listing.
+  const nextMatchupRegex =
+    /\b[A-Z][A-Za-z0-9.&'’()/-]*(?:\s+[A-Z][A-Za-z0-9.&'’()/-]*){0,5}\s+(?:at|@|vs\.?|versus)\s+[A-Z][A-Za-z0-9.&'’()/-]*(?:\s+[A-Z][A-Za-z0-9.&'’()/-]*){0,5}\b/;
+
+  const match = nextMatchupRegex.exec(remainder);
+
+  return match
+    ? startIndex + match.index
+    : text.length;
 }
 
 function channelType(channel) {
@@ -196,14 +216,14 @@ export async function lookupDirectvGame({
     const html = await response.text();
     const text = cleanHtml(html);
 
-    const matchupIndex =
-      findMatchupIndex(
+    const matchup =
+      findMatchup(
         text,
         away,
         home
       );
 
-    if (matchupIndex < 0) {
+    if (!matchup) {
       console.log(
         `DIRECTV matchup not found: ${away} at ${home}`
       );
@@ -211,10 +231,16 @@ export async function lookupDirectvGame({
       return null;
     }
 
+    const nextMatchupIndex =
+      findNextMatchupIndex(
+        text,
+        matchup.end
+      );
+
     const section =
       text.slice(
-        matchupIndex,
-        matchupIndex + 500
+        matchup.index,
+        nextMatchupIndex
       );
 
     const channels =
