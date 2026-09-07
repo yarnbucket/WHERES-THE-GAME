@@ -44,7 +44,20 @@ const API_BASE="https://wheres-the-game.onrender.com";
 const sportLabels={nfl:"NFL",ncaaf:"NCAA Football",mlb:"MLB",nhl:"NHL",nba:"NBA",ncaab:"NCAA Basketball"};
 let selectedSport="mlb", selectedDate=new Date(), favoritesOnly=false, currentGames=[];
 const gamesList=document.getElementById("gamesList"), statusBox=document.getElementById("status"), scheduleTitle=document.getElementById("scheduleTitle"), dateLabel=document.getElementById("dateLabel"), todayNav=document.getElementById("todayNav"), favoritesNav=document.getElementById("favoritesNav");
-function toApiDate(date){return date.toISOString().slice(0,10).replaceAll("-","")}
+function toApiDate(date){
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(date);
+
+  const year = parts.find(p => p.type === "year").value;
+  const month = parts.find(p => p.type === "month").value;
+  const day = parts.find(p => p.type === "day").value;
+
+  return `${year}${month}${day}`;
+}
 function formatDate(date){return date.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric",year:"numeric"})}
 function formatTime(value){if(!value)return"TBD";return new Date(value).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",timeZone:"America/New_York",timeZoneName:"short"})}
 function getFavorites(){try{const x=JSON.parse(localStorage.getItem("wtg-live-favorites")||"[]");return Array.isArray(x)?x:[]}catch{return[]}}
