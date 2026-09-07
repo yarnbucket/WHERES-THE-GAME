@@ -4,18 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Where's the Game?</title>
-  <!-- WTG 0.1Ba: prefer dedicated MLB Extra Innings feed over shared MLB Network 213/213-1 -->
+  <!-- WTG 0.1C: all-sports registry + user show/hide sports settings, built from approved 0.1Ba -->
   <style>
     :root{--bg:#f5f8fc;--card:#fff;--ink:#0b1b3a;--muted:#60708d;--blue:#1769e8;--blue2:#e8f2ff;--line:#dce5f0;--shadow:0 8px 24px rgba(23,55,99,.08);--warn:#fff3cd;--warn-ink:#765800;--ok:#eaf8ef;--ok-ink:#166534}
     *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
     .app{width:min(100%,760px);margin:0 auto;padding:18px 14px 92px}.header{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:16px}.brand{display:flex;align-items:center;gap:12px}.logo{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;background:var(--blue);color:#fff;font-size:28px;box-shadow:var(--shadow)}.brand h1{margin:0;font-size:25px;line-height:.9;font-style:italic}.brand p{margin:7px 0 0;color:var(--muted);font-size:14px}.gear{border:0;background:transparent;font-size:24px;cursor:pointer}
-    .sport-tabs{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;background:#e9eef6;border-radius:16px;padding:4px;overflow-x:auto}.sport-tabs button{border:0;background:transparent;color:#263957;font-weight:800;padding:12px 10px;border-radius:12px;min-width:76px;cursor:pointer}.sport-tabs button.active{color:#fff;background:var(--blue);box-shadow:0 5px 12px rgba(23,105,232,.28)}
+    .sport-tabs{display:flex;gap:4px;background:#e9eef6;border-radius:16px;padding:4px;overflow-x:auto;scrollbar-width:thin}.sport-tabs button{border:0;background:transparent;color:#263957;font-weight:800;padding:12px 10px;border-radius:12px;min-width:max-content;cursor:pointer;white-space:nowrap}.sport-tabs button.active{color:#fff;background:var(--blue);box-shadow:0 5px 12px rgba(23,105,232,.28)}
     .date-row{display:grid;grid-template-columns:48px 1fr 48px 86px;align-items:center;gap:10px;margin:18px 0 12px}.navbtn,.todaybtn{border:1px solid var(--line);background:#fff;color:var(--blue);height:46px;border-radius:13px;font-size:20px;font-weight:800;cursor:pointer}.todaybtn{font-size:15px;background:#eef5ff}.date-label{text-align:center;font-weight:800;font-size:17px}.date-meta{text-align:center;margin:-5px 0 12px;color:var(--muted);font-size:14px;font-weight:700}.date-meta strong{color:var(--ink)}.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 10px}.section-head h2{font-size:20px;margin:0}.live-pill{margin-left:auto;background:var(--ok);color:var(--ok-ink);border:1px solid #bde8c8;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:900;white-space:nowrap}
     .games{display:grid;gap:12px}.game-card{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:var(--shadow)}.game-sport{color:var(--blue);font-size:12px;font-weight:900;letter-spacing:.05em}.game-title-row{display:flex;align-items:flex-start;gap:8px;margin-top:7px}.game-name{font-size:19px;line-height:1.2;margin:0;flex:1}.favorite{border:1px solid #aebbd0;background:#fff;width:32px;height:32px;border-radius:7px;cursor:pointer;font-size:18px}.favorite.active{color:#f3aa00}.game-time{margin:10px 0 2px;font-weight:800}.game-network,.game-venue{margin:4px 0;color:var(--muted);font-size:14px}
     .directv-box{background:var(--blue2);border-radius:16px;padding:16px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:130px}.directv-label{font-weight:900;font-size:12px;letter-spacing:.06em}.directv-channel{font-size:24px;font-weight:900;margin:16px 0 7px}.directv-note{font-size:12px;color:var(--muted)}
+
+    .settings-backdrop{position:fixed;inset:0;background:rgba(7,21,45,.52);display:none;align-items:flex-end;justify-content:center;z-index:20;padding:14px}.settings-backdrop.open{display:flex}.settings-panel{width:min(100%,720px);max-height:86vh;overflow:auto;background:#fff;border-radius:22px 22px 16px 16px;padding:18px;box-shadow:0 24px 60px rgba(0,0,0,.28)}.settings-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}.settings-head h2{margin:0;font-size:22px}.settings-close{border:1px solid var(--line);background:#fff;border-radius:10px;width:38px;height:38px;font-size:20px;cursor:pointer}.settings-copy{margin:0 0 14px;color:var(--muted);font-size:14px}.settings-actions{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}.settings-actions button{border:1px solid var(--line);background:#f8fbff;color:var(--blue);border-radius:10px;padding:9px 11px;font-weight:800;cursor:pointer}.sports-settings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.sport-setting{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:12px;padding:11px 12px}.sport-setting span{font-weight:800}.sport-setting small{display:block;color:var(--muted);font-weight:600;margin-top:2px}.switch{position:relative;width:46px;height:26px;flex:0 0 auto}.switch input{opacity:0;width:0;height:0}.slider{position:absolute;inset:0;background:#cbd5e1;border-radius:999px;cursor:pointer;transition:.15s}.slider:before{content:"";position:absolute;width:20px;height:20px;left:3px;top:3px;background:#fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.22);transition:.15s}.switch input:checked+.slider{background:var(--blue)}.switch input:checked+.slider:before{transform:translateX(20px)}.settings-foot{margin:14px 0 0;color:var(--muted);font-size:12px}
+
     .status{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;color:var(--muted);text-align:center;margin-bottom:12px}.status.waking{background:var(--warn);color:var(--warn-ink);border-color:#ffe083}
     .bottom-nav{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);width:min(calc(100% - 24px),700px);display:grid;grid-template-columns:1fr 1fr;background:#fff;border:1px solid var(--line);border-radius:18px;padding:8px;box-shadow:0 12px 30px rgba(13,41,76,.18)}.bottom-nav button{border:0;background:transparent;border-radius:12px;padding:10px;font-weight:800;color:#5b6b84;cursor:pointer}.bottom-nav button.active{background:#edf4ff;color:var(--blue)}
-    @media(max-width:640px){.app{padding:12px 10px 86px}.brand h1{font-size:22px}.sport-tabs{grid-template-columns:repeat(6,minmax(72px,1fr))}.date-row{grid-template-columns:44px 1fr 44px 76px}.game-card{grid-template-columns:minmax(0,1fr) 118px;padding:12px}.directv-channel{font-size:21px}.game-name{font-size:17px}}
+    @media(max-width:640px){.app{padding:12px 10px 86px}.brand h1{font-size:22px}.sports-settings{grid-template-columns:1fr}.date-row{grid-template-columns:44px 1fr 44px 76px}.game-card{grid-template-columns:minmax(0,1fr) 118px;padding:12px}.directv-channel{font-size:21px}.game-name{font-size:17px}}
   </style>
 </head>
 <body>
@@ -25,9 +28,7 @@
     <button class="gear" title="Settings">⚙️</button>
   </header>
 
-  <div class="sport-tabs" id="sportTabs">
-    <button data-sport="nfl">NFL</button><button data-sport="ncaaf">NCAAF</button><button data-sport="mlb" class="active">MLB</button><button data-sport="nhl">NHL</button><button data-sport="nba">NBA</button><button data-sport="ncaab">NCAAB</button>
-  </div>
+  <div class="sport-tabs" id="sportTabs" aria-label="Sports"></div>
 
   <div class="date-row">
     <button class="navbtn" id="prevDay">‹</button><div class="date-label" id="dateLabel"></div><button class="navbtn" id="nextDay">›</button><button class="todaybtn" id="todayBtn">Today</button>
@@ -39,15 +40,115 @@
   <main class="games" id="gamesList"></main>
 </div>
 
+<div class="settings-backdrop" id="settingsBackdrop" aria-hidden="true">
+  <section class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="settings-head">
+      <h2 id="settingsTitle">Sports Settings</h2>
+      <button class="settings-close" id="settingsClose" aria-label="Close settings">×</button>
+    </div>
+    <p class="settings-copy">Choose which sports appear across the top of Where's the Game. Hidden sports stay available and can be turned back on anytime.</p>
+    <div class="settings-actions">
+      <button id="showAllSports">Show all</button>
+      <button id="coreSportsOnly">Core sports</button>
+    </div>
+    <div class="sports-settings" id="sportsSettings"></div>
+    <p class="settings-foot">0.1C starts the all-sports framework. Live schedule/provider feeds are connected sport-by-sport without changing your saved tab preferences.</p>
+  </section>
+</div>
+
 <nav class="bottom-nav"><button id="todayNav" class="active">📅 Today</button><button id="favoritesNav">★ Favorites</button></nav>
 
 <script>
 const API_BASE="https://wheres-the-game.onrender.com";
 const EASTERN_TZ="America/New_York";
-const sportLabels={nfl:"NFL",ncaaf:"NCAA Football",mlb:"MLB",nhl:"NHL",nba:"NBA",ncaab:"NCAA Basketball"};
+const SPORT_CATALOG=[
+  {id:"nfl",tab:"NFL",label:"NFL",group:"Football",live:true,defaultOn:true},
+  {id:"ncaaf",tab:"NCAAF",label:"NCAA Football",group:"Football",live:true,defaultOn:true},
+  {id:"mlb",tab:"MLB",label:"MLB",group:"Baseball",live:true,defaultOn:true},
+  {id:"nhl",tab:"NHL",label:"NHL",group:"Hockey",live:true,defaultOn:true},
+  {id:"nba",tab:"NBA",label:"NBA",group:"Basketball",live:true,defaultOn:true},
+  {id:"ncaab",tab:"NCAAB",label:"NCAA Basketball",group:"Basketball",live:true,defaultOn:true},
+  {id:"wnba",tab:"WNBA",label:"WNBA",group:"Basketball",live:false,defaultOn:true},
+  {id:"racing",tab:"Racing",label:"Racing",group:"Motorsports",live:false,defaultOn:true},
+  {id:"golf",tab:"Golf",label:"Golf",group:"Golf",live:false,defaultOn:true},
+  {id:"tennis",tab:"Tennis",label:"Tennis",group:"Tennis",live:false,defaultOn:true},
+  {id:"soccer",tab:"Soccer",label:"Soccer",group:"Soccer",live:false,defaultOn:true},
+  {id:"mma",tab:"MMA/UFC",label:"MMA / UFC",group:"Combat",live:false,defaultOn:true},
+  {id:"boxing",tab:"Boxing",label:"Boxing",group:"Combat",live:false,defaultOn:true},
+  {id:"cbaseball",tab:"College Baseball",label:"College Baseball",group:"Baseball",live:false,defaultOn:true},
+  {id:"softball",tab:"Softball",label:"College Softball",group:"Softball",live:false,defaultOn:true},
+  {id:"lacrosse",tab:"Lacrosse",label:"Lacrosse",group:"Field Sports",live:false,defaultOn:true},
+  {id:"volleyball",tab:"Volleyball",label:"Volleyball",group:"Court Sports",live:false,defaultOn:true},
+  {id:"rugby",tab:"Rugby",label:"Rugby",group:"Field Sports",live:false,defaultOn:true},
+  {id:"cricket",tab:"Cricket",label:"Cricket",group:"Bat & Ball",live:false,defaultOn:true},
+  {id:"horseracing",tab:"Horse Racing",label:"Horse Racing",group:"Racing",live:false,defaultOn:true},
+  {id:"cycling",tab:"Cycling",label:"Cycling",group:"Racing",live:false,defaultOn:true},
+  {id:"track",tab:"Track & Field",label:"Track & Field",group:"Olympic",live:false,defaultOn:true},
+  {id:"swimming",tab:"Swimming",label:"Swimming / Diving",group:"Olympic",live:false,defaultOn:true},
+  {id:"gymnastics",tab:"Gymnastics",label:"Gymnastics",group:"Olympic",live:false,defaultOn:true},
+  {id:"wrestling",tab:"Wrestling",label:"Wrestling",group:"Combat",live:false,defaultOn:true},
+  {id:"otherhockey",tab:"Other Hockey",label:"Other Hockey",group:"Hockey",live:false,defaultOn:true},
+  {id:"otherbasketball",tab:"Other Basketball",label:"Other Basketball",group:"Basketball",live:false,defaultOn:true},
+  {id:"otherbaseball",tab:"Other Baseball",label:"Other Baseball",group:"Baseball",live:false,defaultOn:true},
+  {id:"olympics",tab:"Olympics",label:"Olympics / Major Events",group:"Multi-sport",live:false,defaultOn:true}
+];
+const sportLabels=Object.fromEntries(SPORT_CATALOG.map(s=>[s.id,s.label]));
+const SPORT_PREFS_KEY="wtg-visible-sports-v1";
 let selectedSport="mlb", selectedDate=new Date(), favoritesOnly=false, currentGames=[];
 let serverTimeBaseMs=null, serverTimePerfBase=null;
-const gamesList=document.getElementById("gamesList"), statusBox=document.getElementById("status"), scheduleTitle=document.getElementById("scheduleTitle"), dateLabel=document.getElementById("dateLabel"), todayNav=document.getElementById("todayNav"), favoritesNav=document.getElementById("favoritesNav"), currentTimeEl=document.getElementById("currentTime"), remainingGamesEl=document.getElementById("remainingGames");
+const gamesList=document.getElementById("gamesList"), statusBox=document.getElementById("status"), scheduleTitle=document.getElementById("scheduleTitle"), dateLabel=document.getElementById("dateLabel"), todayNav=document.getElementById("todayNav"), favoritesNav=document.getElementById("favoritesNav"), currentTimeEl=document.getElementById("currentTime"), remainingGamesEl=document.getElementById("remainingGames"), sportTabs=document.getElementById("sportTabs"), settingsBackdrop=document.getElementById("settingsBackdrop"), sportsSettings=document.getElementById("sportsSettings");
+
+
+function getVisibleSportIds(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(SPORT_PREFS_KEY)||"null");
+    if(Array.isArray(saved)&&saved.length)return saved.filter(id=>SPORT_CATALOG.some(s=>s.id===id));
+  }catch{}
+  return SPORT_CATALOG.filter(s=>s.defaultOn).map(s=>s.id);
+}
+
+function saveVisibleSportIds(ids){
+  const unique=SPORT_CATALOG.map(s=>s.id).filter(id=>ids.includes(id));
+  localStorage.setItem(SPORT_PREFS_KEY,JSON.stringify(unique.length?unique:["mlb"]));
+}
+
+function renderSportTabs(){
+  const visible=getVisibleSportIds();
+  if(!visible.includes(selectedSport))selectedSport=visible[0]||"mlb";
+  sportTabs.innerHTML=SPORT_CATALOG
+    .filter(s=>visible.includes(s.id))
+    .map(s=>`<button data-sport="${s.id}" class="${s.id===selectedSport?"active":""}">${s.tab}</button>`)
+    .join("");
+}
+
+function renderSportsSettings(){
+  const visible=getVisibleSportIds();
+  sportsSettings.innerHTML=SPORT_CATALOG.map(s=>`
+    <label class="sport-setting">
+      <span>${s.label}<small>${s.group}</small></span>
+      <span class="switch"><input type="checkbox" data-sport-setting="${s.id}" ${visible.includes(s.id)?"checked":""}><span class="slider"></span></span>
+    </label>`).join("");
+}
+
+function applySportsSettings(){
+  const ids=[...sportsSettings.querySelectorAll("input[data-sport-setting]:checked")].map(x=>x.dataset.sportSetting);
+  saveVisibleSportIds(ids);
+  renderSportTabs();
+  if(!ids.includes(selectedSport))selectedSport=ids[0]||"mlb";
+  renderSportTabs();
+  loadGames();
+}
+
+function openSettings(){
+  renderSportsSettings();
+  settingsBackdrop.classList.add("open");
+  settingsBackdrop.setAttribute("aria-hidden","false");
+}
+
+function closeSettings(){
+  settingsBackdrop.classList.remove("open");
+  settingsBackdrop.setAttribute("aria-hidden","true");
+}
 
 function toApiDate(date){
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -162,15 +263,23 @@ function renderGame(game,conflictKeys){const d=getDirectvDisplay(game,conflictKe
 function renderGames(games){const conflictKeys=directvNationalConflictKeys(games);gamesList.innerHTML=games.map(game=>renderGame(game,conflictKeys)).join("");updateDateMeta()}
 function setStatus(text,waking=false){statusBox.textContent=text;statusBox.className=waking?"status waking":"status";statusBox.style.display="block"}
 function hideStatus(){statusBox.style.display="none"}
-async function loadGames(){favoritesOnly=false;updateDateMeta();todayNav.classList.add("active");favoritesNav.classList.remove("active");dateLabel.textContent=formatDate(selectedDate);scheduleTitle.textContent=`${sportLabels[selectedSport]} Games`;gamesList.innerHTML="";setStatus("Loading live games... If the free backend was asleep, this can take up to about a minute.",true);try{const date=toApiDate(selectedDate);const response=await fetch(`${API_BASE}/resolve?sport=${selectedSport}&date=${date}&provider=directv`);if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json();syncServerTime(data.serverTime);currentGames=Array.isArray(data.games)?data.games:[];scheduleTitle.textContent=`${sportLabels[selectedSport]} Games (${currentGames.length})`;if(!currentGames.length){setStatus("No games found for this sport and date.");return}hideStatus();renderGames(currentGames)}catch(error){console.error(error);setStatus("Could not load live games. The backend may still be waking up; refresh in a moment.")}}
+async function loadGames(){favoritesOnly=false;updateDateMeta();todayNav.classList.add("active");favoritesNav.classList.remove("active");dateLabel.textContent=formatDate(selectedDate);scheduleTitle.textContent=`${sportLabels[selectedSport]} Games`;gamesList.innerHTML="";const sportMeta=SPORT_CATALOG.find(s=>s.id===selectedSport);if(!sportMeta?.live){setStatus(`${sportMeta?.label||"This sport"} is enabled in 0.1C. Its live schedule and channel feed is the next data connection step.`);return}setStatus("Loading live games... If the free backend was asleep, this can take up to about a minute.",true);try{const date=toApiDate(selectedDate);const response=await fetch(`${API_BASE}/resolve?sport=${selectedSport}&date=${date}&provider=directv`);if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json();syncServerTime(data.serverTime);currentGames=Array.isArray(data.games)?data.games:[];scheduleTitle.textContent=`${sportLabels[selectedSport]} Games (${currentGames.length})`;if(!currentGames.length){setStatus("No games found for this sport and date.");return}hideStatus();renderGames(currentGames)}catch(error){console.error(error);setStatus("Could not load live games. The backend may still be waking up; refresh in a moment.")}}
 function loadFavorites(){favoritesOnly=true;updateDateMeta();todayNav.classList.remove("active");favoritesNav.classList.add("active");const favs=getFavorites();currentGames=favs;dateLabel.textContent="Favorites";scheduleTitle.textContent=`Favorite Games (${favs.length})`;if(!favs.length){gamesList.innerHTML="";setStatus("No favorite games yet. Tap ☆ on a game to save it.");return}hideStatus();renderGames(favs)}
-document.querySelectorAll("#sportTabs button").forEach(button=>button.addEventListener("click",()=>{document.querySelectorAll("#sportTabs button").forEach(btn=>btn.classList.remove("active"));button.classList.add("active");selectedSport=button.dataset.sport;loadGames()}));
+sportTabs.addEventListener("click",event=>{const button=event.target.closest("button[data-sport]");if(!button)return;selectedSport=button.dataset.sport;renderSportTabs();loadGames()});
+document.querySelector(".gear").addEventListener("click",openSettings);
+document.getElementById("settingsClose").addEventListener("click",closeSettings);
+settingsBackdrop.addEventListener("click",event=>{if(event.target===settingsBackdrop)closeSettings()});
+sportsSettings.addEventListener("change",applySportsSettings);
+document.getElementById("showAllSports").addEventListener("click",()=>{saveVisibleSportIds(SPORT_CATALOG.map(s=>s.id));renderSportsSettings();renderSportTabs()});
+document.getElementById("coreSportsOnly").addEventListener("click",()=>{saveVisibleSportIds(["nfl","ncaaf","mlb","nhl","nba","ncaab","wnba","racing","golf","tennis","soccer"]);renderSportsSettings();renderSportTabs();if(!getVisibleSportIds().includes(selectedSport))selectedSport="mlb";loadGames()});
 document.getElementById("prevDay").addEventListener("click",()=>{selectedDate.setDate(selectedDate.getDate()-1);selectedDate=new Date(selectedDate);loadGames()});
 document.getElementById("nextDay").addEventListener("click",()=>{selectedDate.setDate(selectedDate.getDate()+1);selectedDate=new Date(selectedDate);loadGames()});
 document.getElementById("todayBtn").addEventListener("click",()=>{selectedDate=new Date();loadGames()});
 todayNav.addEventListener("click",()=>{selectedDate=new Date();loadGames()});
 favoritesNav.addEventListener("click",loadFavorites);
 gamesList.addEventListener("click",event=>{const button=event.target.closest(".favorite");if(!button)return;const game=currentGames.find(item=>String(item.id)===String(button.dataset.id));if(game)toggleFavorite(game)});
+renderSportTabs();
+renderSportsSettings();
 updateDateMeta();
 setInterval(updateDateMeta,60000);
 loadGames();
