@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Where's the Game?</title>
-  <!-- WTG time repair: force all displayed schedule/current times to Eastern Time -->
+  <!-- WTG 0.1Ba: resolve simultaneous duplicate DIRECTV primary channels -->
   <style>
     :root{--bg:#f5f8fc;--card:#fff;--ink:#0b1b3a;--muted:#60708d;--blue:#1769e8;--blue2:#e8f2ff;--line:#dce5f0;--shadow:0 8px 24px rgba(23,55,99,.08);--warn:#fff3cd;--warn-ink:#765800;--ok:#eaf8ef;--ok-ink:#166534}
     *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
@@ -117,9 +117,52 @@ function getFavorites(){try{const x=JSON.parse(localStorage.getItem("wtg-live-fa
 function saveFavorites(items){localStorage.setItem("wtg-live-favorites",JSON.stringify(items))}
 function isFavorite(id){return getFavorites().some(item=>String(item.id)===String(id))}
 function toggleFavorite(game){const favs=getFavorites(),exists=favs.some(item=>String(item.id)===String(game.id));saveFavorites(exists?favs.filter(item=>String(item.id)!==String(game.id)):[...favs,game]);favoritesOnly?loadFavorites():renderGames(currentGames)}
-function getDirectvDisplay(game){const options=Array.isArray(game.directv)?game.directv:[];const national=options.find(x=>x?.directvChannel&&x?.type==="national");if(national)return{channel:national.directvChannel,note:national.network||"National"};const local=options.find(x=>x?.directvChannel&&x?.type==="local");if(local)return{channel:local.directvChannel,note:local.station?`${local.station} • ${local.network||""}`:(local.network||"Local")};const regional=options.find(x=>x?.directvChannel&&x?.type==="regional");if(regional)return{channel:regional.directvChannel,note:regional.network||"Regional"};const guide=game?.directvGuide?.channels;if(Array.isArray(guide)&&guide.length){const first=guide[0];return{channel:`${first.channel}${first.hd?" HD":""}`,note:first.feed||game?.directvGuide?.package||"DIRECTV Sports Guide"}}const pkg=game?.leaguePackage;if(pkg?.name)return{channel:"TBD",note:"Channel not assigned yet"};return{channel:"TBD",note:"Channel not assigned yet"}}
-function renderGame(game){const d=getDirectvDisplay(game),favorite=isFavorite(game.id);return `<article class="game-card"><div><span class="game-sport">${game.sport||sportLabels[selectedSport]}</span><div class="game-title-row"><h3 class="game-name">${game.away||"Away"} @ ${game.home||"Home"}</h3><button class="favorite ${favorite?"active":""}" data-id="${game.id}">${favorite?"★":"☆"}</button></div><p class="game-time">${formatTime(game.startTime)}</p><p class="game-network">${game.broadcast||game.network||"Broadcast information unavailable"}</p><p class="game-venue">${game.venue||""}</p></div><div class="directv-box"><div class="directv-label">DIRECTV</div><div class="directv-channel">${d.channel}</div><div class="directv-note">${d.note}</div></div></article>`}
-function renderGames(games){gamesList.innerHTML=games.map(renderGame).join("");updateDateMeta()}
+function directvNationalConflictKeys(games){
+  const counts=new Map();
+  for(const game of games){
+    const options=Array.isArray(game?.directv)?game.directv:[];
+    const national=options.find(x=>x?.directvChannel&&x?.type==="national");
+    if(!national||!game?.startTime)continue;
+    const key=`${game.startTime}|${national.directvChannel}`;
+    counts.set(key,(counts.get(key)||0)+1);
+  }
+  return new Set([...counts.entries()].filter(([,count])=>count>1).map(([key])=>key));
+}
+
+function getDirectvDisplay(game,conflictKeys=new Set()){
+  const options=Array.isArray(game.directv)?game.directv:[];
+  const national=options.find(x=>x?.directvChannel&&x?.type==="national");
+  const guide=Array.isArray(game?.directvGuide?.channels)?game.directvGuide.channels:[];
+
+  if(national&&game?.startTime){
+    const key=`${game.startTime}|${national.directvChannel}`;
+    if(conflictKeys.has(key)){
+      const dedicatedFeed=guide.find(x=>x?.channel&&x?.type==="package");
+      if(dedicatedFeed){
+        return{
+          channel:`${dedicatedFeed.channel}${dedicatedFeed.hd?" HD":""}`,
+          note:dedicatedFeed.feed||dedicatedFeed.network||"MLB Extra Innings"
+        };
+      }
+    }
+  }
+
+  if(national)return{channel:national.directvChannel,note:national.network||"National"};
+  const local=options.find(x=>x?.directvChannel&&x?.type==="local");
+  if(local)return{channel:local.directvChannel,note:local.station?`${local.station} • ${local.network||""}`:(local.network||"Local")};
+  const regional=options.find(x=>x?.directvChannel&&x?.type==="regional");
+  if(regional)return{channel:regional.directvChannel,note:regional.network||"Regional"};
+  if(guide.length){
+    const first=guide[0];
+    return{channel:`${first.channel}${first.hd?" HD":""}`,note:first.feed||game?.directvGuide?.package||first.network||"DIRECTV Sports Guide"};
+  }
+  const pkg=game?.leaguePackage;
+  if(pkg?.name)return{channel:"TBD",note:"Channel not assigned yet"};
+  return{channel:"TBD",note:"Channel not assigned yet"};
+}
+
+function renderGame(game,conflictKeys){const d=getDirectvDisplay(game,conflictKeys),favorite=isFavorite(game.id);return `<article class="game-card"><div><span class="game-sport">${game.sport||sportLabels[selectedSport]}</span><div class="game-title-row"><h3 class="game-name">${game.away||"Away"} @ ${game.home||"Home"}</h3><button class="favorite ${favorite?"active":""}" data-id="${game.id}">${favorite?"★":"☆"}</button></div><p class="game-time">${formatTime(game.startTime)}</p><p class="game-network">${game.broadcast||game.network||"Broadcast information unavailable"}</p><p class="game-venue">${game.venue||""}</p></div><div class="directv-box"><div class="directv-label">DIRECTV</div><div class="directv-channel">${d.channel}</div><div class="directv-note">${d.note}</div></div></article>`}
+function renderGames(games){const conflictKeys=directvNationalConflictKeys(games);gamesList.innerHTML=games.map(game=>renderGame(game,conflictKeys)).join("");updateDateMeta()}
 function setStatus(text,waking=false){statusBox.textContent=text;statusBox.className=waking?"status waking":"status";statusBox.style.display="block"}
 function hideStatus(){statusBox.style.display="none"}
 async function loadGames(){favoritesOnly=false;updateDateMeta();todayNav.classList.add("active");favoritesNav.classList.remove("active");dateLabel.textContent=formatDate(selectedDate);scheduleTitle.textContent=`${sportLabels[selectedSport]} Games`;gamesList.innerHTML="";setStatus("Loading live games... If the free backend was asleep, this can take up to about a minute.",true);try{const date=toApiDate(selectedDate);const response=await fetch(`${API_BASE}/resolve?sport=${selectedSport}&date=${date}&provider=directv`);if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json();syncServerTime(data.serverTime);currentGames=Array.isArray(data.games)?data.games:[];scheduleTitle.textContent=`${sportLabels[selectedSport]} Games (${currentGames.length})`;if(!currentGames.length){setStatus("No games found for this sport and date.");return}hideStatus();renderGames(currentGames)}catch(error){console.error(error);setStatus("Could not load live games. The backend may still be waking up; refresh in a moment.")}}
