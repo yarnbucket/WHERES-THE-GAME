@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Where's the Game?</title>
-  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUALS APPROVED through 0.1F4; 0.1G viewing-source architecture; 0.1G1 mobile card layout; 0.1H provider selection; 0.1H1 Pittsburgh provider mappings; 0.1H2 sports network audit; 0.1H3 stable provider typography; 0.1H4 daily favorites cleanup; 0.1H5 college sports priority; 0.1H6 pro sports priority + NCAA division sorting; 0.1H6a stable Today sorting; 0.1H6b locked What's On order; 0.1H7 branded gold loading meter; 0.1H8 Standard/National/Local viewing modes; 0.1H8a What's On pro-first hierarchy; 0.1H8b What's On TV-only; 0.1H8c NCAA conference team-membership filters; 0.1H8d NCAA filter engine repair -->
+  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUALS APPROVED through 0.1F4; 0.1G viewing-source architecture; 0.1G1 mobile card layout; 0.1H provider selection; 0.1H1 Pittsburgh provider mappings; 0.1H2 sports network audit; 0.1H3 stable provider typography; 0.1H4 daily favorites cleanup; 0.1H5 college sports priority; 0.1H6 pro sports priority + NCAA division sorting; 0.1H6a stable Today sorting; 0.1H6b locked What's On order; 0.1H7 branded gold loading meter; 0.1H8 Standard/National/Local viewing modes; 0.1H8a What's On pro-first hierarchy; 0.1H8b What's On TV-only; 0.1H8c NCAA conference team-membership filters; 0.1H8d NCAA filter engine repair; 0.1H8e tap game for Google search -->
   <style>
     :root{--bg:#f5f8fc;--card:#fff;--ink:#0b1b3a;--muted:#60708d;--blue:#1769e8;--blue2:#e8f2ff;--line:#dce5f0;--shadow:0 8px 24px rgba(23,55,99,.08);--warn:#fff3cd;--warn-ink:#765800;--ok:#eaf8ef;--ok-ink:#166534}
     *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
@@ -891,6 +891,9 @@
   .viewing-mode-options button{min-height:48px}
 }
 
+
+.game-card{cursor:pointer}
+.game-card .favorite,.game-card a,.game-card button{cursor:pointer}
 </style>
 </head>
 <body>
@@ -2448,6 +2451,17 @@ function renderGame(game,conflictKeys){
     </div>
   </article>`
 }
+function googleGameSearch(game){
+  const matchup=String(game?.name||game?.title||`${game?.away||""} vs ${game?.home||""}`).trim();
+  const sport=sportLabels[game?._sportKey]||game?._sportKey||"sports";
+  const dt=game?.startTime?new Date(game.startTime):null;
+  const dateText=dt&&!Number.isNaN(dt.getTime())
+    ?dt.toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})
+    :"";
+  const query=[matchup,sport,dateText].filter(Boolean).join(" ");
+  window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`,"_blank","noopener,noreferrer");
+}
+
 function renderGames(games){const conflictKeys=directvNationalConflictKeys(games);gamesList.innerHTML=games.map(game=>renderGame(game,conflictKeys)).join("");updateDateMeta()}
 function setStatus(text,waking=false){statusBox.textContent=text;statusBox.className=waking?"status waking":"status";statusBox.style.display="block"}
 function hideStatus(){statusBox.style.display="none"}
@@ -2501,7 +2515,31 @@ document.getElementById("nextDay").addEventListener("click",()=>{selectedDate.se
 document.getElementById("todayBtn").addEventListener("click",()=>{selectedDate=new Date();loadGames()});
 todayNav.addEventListener("click",()=>{selectedDate=new Date();selectedSport="whats-on";activeCollegeFilter="all";activeProFilter="all";renderSportTabs();renderCollegeFilter();renderProFilter();loadGames()});
 favoritesNav.addEventListener("click",()=>{document.getElementById("collegeFilterStrip").hidden=true;document.getElementById("proFilterStrip").hidden=true;loadFavorites()});
-gamesList.addEventListener("click",event=>{const button=event.target.closest(".favorite");if(!button)return;const game=currentGames.find(item=>String(item.id)===String(button.dataset.id));if(game)toggleFavorite(game)});
+gamesList.addEventListener("click",event=>{
+  const favoriteButton=event.target.closest(".favorite");
+  if(favoriteButton){
+    const game=currentGames.find(item=>String(item.id)===String(favoriteButton.dataset.id));
+    if(game)toggleFavorite(game);
+    return;
+  }
+
+  // Preserve normal behavior for links/buttons inside a card.
+  if(event.target.closest("a,button,input,select,textarea"))return;
+
+  const card=event.target.closest(".game-card");
+  if(!card)return;
+
+  const cards=[...gamesList.querySelectorAll(".game-card")];
+  const index=cards.indexOf(card);
+  const visibleGames=isCollegeSport(selectedSport)
+    ?sortCollegeGames((Array.isArray(currentGames)?currentGames:[]).filter(g=>collegeFilterMatches(g,activeCollegeFilter)))
+    :isProSport(selectedSport)
+      ?sortProGames((Array.isArray(currentGames)?currentGames:[]).filter(g=>proFilterMatches(g,activeProFilter)))
+      :currentGames;
+
+  const game=visibleGames[index];
+  if(game)googleGameSearch(game);
+});
 renderSportTabs();
 renderCollegeFilter();
 renderProFilter();
