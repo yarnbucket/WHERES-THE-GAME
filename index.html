@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Where's the Game?</title>
-  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUALS APPROVED through 0.1F4; 0.1G viewing-source architecture; 0.1G1 mobile card layout; 0.1H provider selection; 0.1H1 Pittsburgh provider mappings; 0.1H2 sports network audit; 0.1H3 stable provider typography; 0.1H4 daily favorites cleanup; 0.1H5 college sports priority; 0.1H6 pro sports priority + NCAA division sorting; 0.1H6a stable Today sorting; 0.1H6b locked What's On order; 0.1H7 branded gold loading meter; 0.1H8 Standard/National/Local viewing modes; 0.1H8a What's On pro-first hierarchy; 0.1H8b What's On TV-only -->
+  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUALS APPROVED through 0.1F4; 0.1G viewing-source architecture; 0.1G1 mobile card layout; 0.1H provider selection; 0.1H1 Pittsburgh provider mappings; 0.1H2 sports network audit; 0.1H3 stable provider typography; 0.1H4 daily favorites cleanup; 0.1H5 college sports priority; 0.1H6 pro sports priority + NCAA division sorting; 0.1H6a stable Today sorting; 0.1H6b locked What's On order; 0.1H7 branded gold loading meter; 0.1H8 Standard/National/Local viewing modes; 0.1H8a What's On pro-first hierarchy; 0.1H8b What's On TV-only; 0.1H8c NCAA conference team-membership filters -->
   <style>
     :root{--bg:#f5f8fc;--card:#fff;--ink:#0b1b3a;--muted:#60708d;--blue:#1769e8;--blue2:#e8f2ff;--line:#dce5f0;--shadow:0 8px 24px rgba(23,55,99,.08);--warn:#fff3cd;--warn-ink:#765800;--ok:#eaf8ef;--ok-ink:#166534}
     *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
@@ -1753,9 +1753,50 @@ function isFCSGame(game){
   const t=collegeText(game);
   return /\bFCS\b|FOOTBALL CHAMPIONSHIP SUBDIVISION/.test(t);
 }
+const COLLEGE_CONFERENCE_TEAMS={
+  acc:[
+    "boston college","california golden bears","cal golden bears","clemson","duke",
+    "florida state","georgia tech","louisville","miami hurricanes","miami (fl)",
+    "north carolina","nc state","north carolina state","pitt","pittsburgh panthers",
+    "smu","stanford","syracuse","virginia cavaliers","virginia tech","wake forest"
+  ],
+  sec:[
+    "alabama","arkansas","auburn","florida gators","georgia bulldogs","kentucky",
+    "lsu","ole miss","mississippi rebels","mississippi state","missouri tigers",
+    "oklahoma sooners","south carolina","tennessee volunteers","texas longhorns",
+    "texas a&m","vanderbilt"
+  ],
+  bigten:[
+    "illinois","indiana hoosiers","iowa hawkeyes","maryland terrapins","michigan wolverines",
+    "michigan state","minnesota golden gophers","nebraska cornhuskers","northwestern",
+    "ohio state","oregon ducks","penn state","purdue","rutgers","ucla","usc trojans",
+    "washington huskies","wisconsin badgers"
+  ],
+  big12:[
+    "arizona wildcats","arizona state","baylor","byu","ucf","cincinnati bearcats",
+    "colorado buffaloes","houston cougars","iowa state","kansas jayhawks","kansas state",
+    "oklahoma state","tcu","texas tech","utah utes","west virginia","wvu"
+  ],
+  bigeast:[
+    "butler","connecticut huskies","uconn","creighton","depaul","georgetown",
+    "marquette","providence","seton hall","st. john's","st john's","villanova","xavier"
+  ]
+};
+
+function collegeTeamIdentityText(game){
+  return [
+    game?.away,game?.home,game?.awayTeam?.name,game?.homeTeam?.name,
+    game?.awayTeam?.displayName,game?.homeTeam?.displayName,
+    game?.competitors,game?.teams
+  ].filter(Boolean).map(v=>typeof v==="object"?JSON.stringify(v):String(v)).join(" ").toLowerCase();
+}
+
 function conferenceMatch(game,key){
+  // 0.1H8c: conference filters are team-membership filters first.
+  // Feed conference metadata is still accepted when present, but the network
+  // carrying the game does not determine whether a game belongs in ACC/SEC/etc.
   const t=collegeText(game);
-  const tests={
+  const metadataTests={
     acc:/\bACC\b|ATLANTIC COAST/,
     sec:/\bSEC\b|SOUTHEASTERN/,
     bigten:/\bBIG TEN\b|\bB1G\b/,
@@ -1765,7 +1806,21 @@ function conferenceMatch(game,key){
     hockeyeast:/HOCKEY EAST/,
     ecac:/\bECAC\b/
   };
-  return tests[key]?.test(t)||false;
+  if(metadataTests[key]?.test(t))return true;
+
+  const teams=COLLEGE_CONFERENCE_TEAMS[key];
+  if(!teams)return false;
+  const identity=collegeTeamIdentityText(game);
+  return teams.some(team=>{
+    if(team==="pitt")return /(^|[^a-z])pitt([^a-z]|$)/.test(identity);
+    if(team==="wvu")return /(^|[^a-z])wvu([^a-z]|$)/.test(identity);
+    if(team==="smu")return /(^|[^a-z])smu([^a-z]|$)/.test(identity);
+    if(team==="byu")return /(^|[^a-z])byu([^a-z]|$)/.test(identity);
+    if(team==="ucf")return /(^|[^a-z])ucf([^a-z]|$)/.test(identity);
+    if(team==="ucla")return /(^|[^a-z])ucla([^a-z]|$)/.test(identity);
+    if(team==="usc trojans")return identity.includes("usc trojans");
+    return identity.includes(team);
+  });
 }
 
 function isMajorCollegeTV(game){
