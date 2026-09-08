@@ -283,6 +283,157 @@
       color:#ffe59b;font-size:12px;
     }
 
+  
+    /* === WTG 0.1F4 MOBILE READABILITY + COMPACT HEADER === */
+    @media (max-width:700px){
+      /* Shorter hero: keep the stadium, remove the empty sky above the title. */
+      .header{
+        min-height:108px !important;
+        height:108px;
+        padding:10px 14px 10px !important;
+        align-items:center !important;
+        background-position:center 60% !important;
+      }
+      .brand{
+        align-items:center;
+        width:100%;
+      }
+      .brand-copy{
+        display:flex;
+        flex-direction:column;
+        justify-content:center;
+      }
+      .brand h1{
+        font-size:clamp(24px,7vw,34px) !important;
+        line-height:.95;
+      }
+      .brand p{
+        margin-top:7px !important;
+      }
+      .logo{
+        width:48px !important;
+        height:48px !important;
+        flex-basis:48px !important;
+      }
+      .gear{
+        width:42px !important;
+        height:42px !important;
+        flex-basis:42px !important;
+      }
+
+      /* Let the matchup use the full card width on phones. */
+      .game-card{
+        grid-template-columns:1fr !important;
+        gap:10px !important;
+        padding:14px !important;
+      }
+      .card-main{
+        width:100%;
+      }
+      .matchup{
+        grid-template-columns:minmax(0,1fr) 32px minmax(0,1fr) !important;
+        gap:8px !important;
+        margin:12px 0 12px !important;
+      }
+      .team{
+        grid-template-columns:40px minmax(0,1fr) !important;
+        gap:8px !important;
+      }
+      .team-mark{
+        display:grid !important;
+        width:40px !important;
+        height:40px !important;
+        border-radius:12px !important;
+        font-size:12px !important;
+      }
+      .team-copy span{
+        font-size:10px !important;
+        line-height:1.1 !important;
+        letter-spacing:.01em;
+      }
+      .team-copy strong{
+        font-size:15px !important;
+        line-height:1.05 !important;
+        margin-top:4px !important;
+        white-space:normal !important;
+        overflow:visible !important;
+        text-overflow:clip !important;
+      }
+      .at-mark{
+        width:32px !important;
+        height:32px !important;
+        font-size:12px !important;
+      }
+      .game-time{
+        font-size:15px !important;
+      }
+      .game-network{
+        font-size:12px !important;
+      }
+      .game-venue{
+        font-size:11px !important;
+      }
+
+      /* Channel becomes a compact bottom strip instead of stealing half the matchup width. */
+      .directv-box{
+        min-height:0 !important;
+        height:auto !important;
+        display:grid !important;
+        grid-template-columns:82px 70px minmax(0,1fr);
+        align-items:center;
+        gap:8px;
+        padding:10px 12px !important;
+        border-radius:14px !important;
+        text-align:left !important;
+      }
+      .directv-label{
+        font-size:10px !important;
+        margin:0 !important;
+      }
+      .directv-channel{
+        font-size:24px !important;
+        margin:0 !important;
+        text-align:center;
+      }
+      .directv-note{
+        font-size:10px !important;
+        line-height:1.2 !important;
+        text-align:right;
+      }
+    }
+
+    @media (max-width:420px){
+      .header{
+        min-height:102px !important;
+        height:102px;
+      }
+      .brand h1{
+        font-size:22px !important;
+      }
+      .brand p{
+        display:block !important;
+        font-size:7px !important;
+        letter-spacing:.13em !important;
+      }
+      .team{
+        grid-template-columns:36px minmax(0,1fr) !important;
+        gap:7px !important;
+      }
+      .team-mark{
+        width:36px !important;
+        height:36px !important;
+      }
+      .team-copy strong{
+        font-size:14px !important;
+      }
+      .directv-box{
+        grid-template-columns:72px 60px minmax(0,1fr);
+      }
+      .directv-channel{
+        font-size:22px !important;
+      }
+    }
+
   </style>
 </head>
 <body>
