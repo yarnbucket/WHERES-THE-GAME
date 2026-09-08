@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Where's the Game?</title>
-  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUALS APPROVED through 0.1F4; 0.1G viewing-source architecture; 0.1G1 mobile card layout; 0.1H provider selection; 0.1H1 Pittsburgh provider mappings; 0.1H2 sports network audit; 0.1H3 stable provider typography; 0.1H4 daily favorites cleanup; 0.1H5 college sports priority; 0.1H6 pro sports priority + NCAA division sorting; 0.1H6a stable Today sorting; 0.1H6b locked What's On order -->
+  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUALS APPROVED through 0.1F4; 0.1G viewing-source architecture; 0.1G1 mobile card layout; 0.1H provider selection; 0.1H1 Pittsburgh provider mappings; 0.1H2 sports network audit; 0.1H3 stable provider typography; 0.1H4 daily favorites cleanup; 0.1H5 college sports priority; 0.1H6 pro sports priority + NCAA division sorting; 0.1H6a stable Today sorting; 0.1H6b locked What's On order; 0.1H7 branded gold loading meter -->
   <style>
     :root{--bg:#f5f8fc;--card:#fff;--ink:#0b1b3a;--muted:#60708d;--blue:#1769e8;--blue2:#e8f2ff;--line:#dce5f0;--shadow:0 8px 24px rgba(23,55,99,.08);--warn:#fff3cd;--warn-ink:#765800;--ok:#eaf8ef;--ok-ink:#166534}
     *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
@@ -849,6 +849,27 @@
   .pro-filter-strip button{min-height:30px;padding:5px 10px;font-size:10px}
 }
 
+
+/* === WTG 0.1H7 BRANDED LOADING METER === */
+.wtg-loading-title{position:relative;display:inline-block;--wtg-load:0%;isolation:isolate}
+.wtg-loading-title .wtg-title-base{display:block}
+.wtg-loading-title .wtg-title-fill{
+  position:absolute;inset:0;display:block;width:var(--wtg-load);overflow:hidden;white-space:nowrap;
+  color:#EAAA00;-webkit-text-fill-color:#EAAA00;pointer-events:none;z-index:2;
+  text-shadow:0 0 4px rgba(234,170,0,.90),0 0 10px rgba(234,170,0,.65),0 0 20px rgba(234,170,0,.35);
+  transition:width .30s ease-out
+}
+.wtg-loading-title.wtg-load-complete .wtg-title-fill{animation:wtgGoldLoadPulse .85s ease-out 1}
+@keyframes wtgGoldLoadPulse{
+  0%{filter:brightness(1);text-shadow:0 0 4px rgba(234,170,0,.90),0 0 10px rgba(234,170,0,.65),0 0 20px rgba(234,170,0,.35)}
+  45%{filter:brightness(1.45);text-shadow:0 0 7px rgba(234,170,0,1),0 0 18px rgba(234,170,0,.95),0 0 34px rgba(234,170,0,.70)}
+  100%{filter:brightness(1);text-shadow:0 0 4px rgba(234,170,0,.90),0 0 10px rgba(234,170,0,.65),0 0 20px rgba(234,170,0,.35)}
+}
+@media(prefers-reduced-motion:reduce){
+  .wtg-loading-title .wtg-title-fill{transition:none}
+  .wtg-loading-title.wtg-load-complete .wtg-title-fill{animation:none}
+}
+
 </style>
 </head>
 <body>
@@ -858,7 +879,7 @@
     <div class="brand">
       <div class="logo" aria-hidden="true"><span>▣</span></div>
       <div class="brand-copy">
-        <h1>WHERE'S THE GAME?</h1>
+        <h1 id="wtgLoadingTitle" class="wtg-loading-title"><span class="wtg-title-base">WHERE'S THE GAME?</span><span class="wtg-title-fill" aria-hidden="true">WHERE'S THE GAME?</span></h1>
         <p>FIND THE GAME. WATCH THE GAME.</p>
       </div>
     </div>
@@ -1982,6 +2003,23 @@ async function fetchSportGamesForWhatsOn(sportKey,date){
   }
 }
 
+
+function setWtgLoadingMeter(done,total){
+  const title=document.getElementById("wtgLoadingTitle");
+  if(!title)return;
+  const safeTotal=Math.max(1,Number(total)||1);
+  const safeDone=Math.max(0,Math.min(safeTotal,Number(done)||0));
+  const pct=Math.round((safeDone/safeTotal)*100);
+  title.style.setProperty("--wtg-load",`${pct}%`);
+  title.setAttribute("aria-label",`WHERE'S THE GAME? ${pct}% loaded`);
+  if(pct>=100){
+    title.classList.remove("wtg-load-complete");
+    void title.offsetWidth;
+    title.classList.add("wtg-load-complete");
+  }else title.classList.remove("wtg-load-complete");
+}
+function resetWtgLoadingMeter(){setWtgLoadingMeter(0,1)}
+
 let whatsOnLoadGeneration=0;
 
 async function loadWhatsOn(){
@@ -1994,11 +2032,13 @@ async function loadWhatsOn(){
   gamesList.innerHTML="";
   setStatus("Loading today's televised and streaming games...",true);
 
+  resetWtgLoadingMeter();
   const visible=new Set(getVisibleSportIds());
   const liveSports=SPORT_CATALOG.filter(s=>s.live&&visible.has(s.id));
   const date=toApiDate(selectedDate);
 
   if(!liveSports.length){
+    setWtgLoadingMeter(1,1);
     currentGames=[];
     hideStatus();
     gamesList.innerHTML=`<div class="whats-empty">No live sports are enabled in Settings.</div>`;
@@ -2021,6 +2061,7 @@ async function loadWhatsOn(){
     results.push(...batchResults);
     completed+=batchResults.length;
     failed+=batchResults.filter(r=>r.error).length;
+    setWtgLoadingMeter(completed,liveSports.length);
     setStatus(`Loading today's games... ${completed}/${liveSports.length}`,true);
   }
 
@@ -2036,6 +2077,7 @@ async function loadWhatsOn(){
   }
 
   if(thisLoad!==whatsOnLoadGeneration)return;
+  setWtgLoadingMeter(liveSports.length,liveSports.length);
   currentGames=activeOrFutureGames([...dedupe.values()]);
   scheduleTitle.textContent=`What's On (${currentGames.length})`;
 
