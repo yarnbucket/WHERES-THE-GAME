@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Where's the Game?</title>
-  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUALS APPROVED through 0.1F4; 0.1G viewing-source architecture; 0.1G1 mobile card layout; 0.1H provider selection; 0.1H1 Pittsburgh provider mappings; 0.1H2 sports network audit -->
+  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUALS APPROVED through 0.1F4; 0.1G viewing-source architecture; 0.1G1 mobile card layout; 0.1H provider selection; 0.1H1 Pittsburgh provider mappings; 0.1H2 sports network audit; 0.1H3 stable provider typography -->
   <style>
     :root{--bg:#f5f8fc;--card:#fff;--ink:#0b1b3a;--muted:#60708d;--blue:#1769e8;--blue2:#e8f2ff;--line:#dce5f0;--shadow:0 8px 24px rgba(23,55,99,.08);--warn:#fff3cd;--warn-ink:#765800;--ok:#eaf8ef;--ok-ink:#166534}
     *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
@@ -755,7 +755,17 @@
       }
     }
 
-  </style>
+  
+/* === WTG 0.1H3 STABLE PROVIDER / CHANNEL TYPOGRAPHY === */
+.directv-box{min-height:54px!important;height:54px!important;display:grid!important;grid-template-columns:118px minmax(0,1fr) minmax(105px,38%)!important;align-items:center!important;gap:8px!important;padding:6px 12px!important;overflow:hidden!important}
+.directv-label{min-width:0!important;font-size:11px!important;line-height:1.05!important;letter-spacing:.055em!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.directv-channel{min-width:0!important;max-width:100%!important;font-size:20px!important;line-height:1!important;letter-spacing:.01em!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;word-break:normal!important;overflow-wrap:normal!important;text-align:center!important}
+.directv-note{min-width:0!important;max-width:100%!important;font-size:10px!important;line-height:1.12!important;white-space:normal!important;overflow:hidden!important;display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;text-align:right!important;word-break:normal!important;overflow-wrap:anywhere!important}
+.directv-channel[data-long-source="true"]{font-size:14px!important;line-height:1.05!important}
+@media(max-width:430px){.directv-box{grid-template-columns:108px minmax(0,1fr) minmax(88px,34%)!important;gap:6px!important;padding:6px 10px!important}.directv-label{font-size:10px!important}.directv-channel{font-size:18px!important}.directv-note{font-size:9px!important}.directv-channel[data-long-source="true"]{font-size:12px!important}}
+@media(max-width:390px){.directv-box{grid-template-columns:96px minmax(0,1fr) 82px!important;gap:5px!important;padding:6px 8px!important}.directv-label{font-size:9px!important}.directv-channel{font-size:17px!important}.directv-note{font-size:8.5px!important}.directv-channel[data-long-source="true"]{font-size:11px!important}}
+
+</style>
 </head>
 <body>
 <div class="app">
@@ -1609,7 +1619,7 @@ function renderGame(game,conflictKeys){
     </div>
     <div class="directv-box">
       <div class="directv-label">${d.label}</div>
-      <div class="directv-channel">${d.channel}</div>
+      <div class="directv-channel" data-long-source="${String(d.channel||'').length>12 || /[A-Za-z].*[A-Za-z].*[A-Za-z]/.test(String(d.channel||'')) ? 'true' : 'false'}">${d.channel}</div>
       <div class="directv-note">${d.note}</div>
     </div>
   </article>`
