@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Where's the Game?</title>
-  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUALS APPROVED through 0.1F4; 0.1G viewing-source architecture; 0.1G1 mobile card layout; 0.1H provider selection; 0.1H1 Pittsburgh provider mappings; 0.1H2 sports network audit; 0.1H3 stable provider typography; 0.1H4 daily favorites cleanup; 0.1H5 college sports priority; 0.1H6 pro sports priority + NCAA division sorting; 0.1H6a stable Today sorting; 0.1H6b locked What's On order; 0.1H7 branded gold loading meter -->
+  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUALS APPROVED through 0.1F4; 0.1G viewing-source architecture; 0.1G1 mobile card layout; 0.1H provider selection; 0.1H1 Pittsburgh provider mappings; 0.1H2 sports network audit; 0.1H3 stable provider typography; 0.1H4 daily favorites cleanup; 0.1H5 college sports priority; 0.1H6 pro sports priority + NCAA division sorting; 0.1H6a stable Today sorting; 0.1H6b locked What's On order; 0.1H7 branded gold loading meter; 0.1H8 Standard/National/Local viewing modes -->
   <style>
     :root{--bg:#f5f8fc;--card:#fff;--ink:#0b1b3a;--muted:#60708d;--blue:#1769e8;--blue2:#e8f2ff;--line:#dce5f0;--shadow:0 8px 24px rgba(23,55,99,.08);--warn:#fff3cd;--warn-ink:#765800;--ok:#eaf8ef;--ok-ink:#166534}
     *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
@@ -870,6 +870,27 @@
   .wtg-loading-title.wtg-load-complete .wtg-title-fill{animation:none}
 }
 
+
+/* === WTG 0.1H8 VIEWING MODES === */
+.viewing-mode-settings-block h3{margin:8px 0;color:#f5fbff;font-size:16px;letter-spacing:.02em}
+.viewing-mode-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0 9px}
+.viewing-mode-options button{
+  min-height:64px;padding:9px 8px;border-radius:12px;border:1px solid rgba(77,158,210,.32);
+  background:rgba(5,30,48,.82);color:#b7ccdc;text-align:left
+}
+.viewing-mode-options button strong{display:block;font-size:12px;letter-spacing:.045em}
+.viewing-mode-options button span{display:block;margin-top:4px;font-size:9px;line-height:1.2;color:#8fa9bc;font-weight:700}
+.viewing-mode-options button.active{
+  color:#fff;background:linear-gradient(180deg,#16adff,#0875ed);border-color:#72ddff;
+  box-shadow:0 0 18px rgba(0,153,255,.36),inset 0 1px 0 rgba(255,255,255,.27)
+}
+.viewing-mode-options button.active span{color:#eaf7ff}
+.viewing-mode-note{min-height:34px;margin:4px 0 0;color:#9db3c4;font-size:11px;line-height:1.35}
+@media(max-width:430px){
+  .viewing-mode-options{grid-template-columns:1fr}
+  .viewing-mode-options button{min-height:48px}
+}
+
 </style>
 </head>
 <body>
@@ -906,6 +927,19 @@
       <h2 id="settingsTitle">Sports Settings</h2>
       <button class="settings-close" id="settingsClose" aria-label="Close settings">×</button>
     </div>
+    <div class="viewing-mode-settings-block">
+      <h3>Viewing Mode</h3>
+      <p class="settings-copy">Choose which games Where's the Game includes. STANDARD shows everything, NATIONAL keeps nationally televised linear TV games, and LOCAL follows the Pittsburgh / Tri-State teams.</p>
+      <div class="viewing-mode-options" id="viewingModeOptions">
+        <button type="button" data-viewing-mode="standard"><strong>STANDARD</strong><span>All TV + streaming</span></button>
+        <button type="button" data-viewing-mode="national"><strong>NATIONAL</strong><span>National linear TV only</span></button>
+        <button type="button" data-viewing-mode="local"><strong>LOCAL</strong><span>Pittsburgh + Tri-State teams</span></button>
+      </div>
+      <p class="viewing-mode-note" id="viewingModeNote"></p>
+    </div>
+
+    <div class="settings-divider"></div>
+
     <div class="provider-settings-block">
       <h3>TV Provider</h3>
       <p class="settings-copy">DIRECTV is the default. Choose another provider and Where's the Game will remember it on this device.</p>
@@ -984,6 +1018,38 @@ const SPORT_CATALOG=[
 const sportLabels=Object.fromEntries(SPORT_CATALOG.map(s=>[s.id,s.label]));
 const SPORT_PREFS_KEY="wtg-visible-sports-v1";
 const PROVIDER_PREFS_KEY="wtg-tv-provider-v1";
+const VIEWING_MODE_PREFS_KEY="wtg-viewing-mode-v1";
+const VIEWING_MODES={
+  standard:{label:"STANDARD"},
+  national:{label:"NATIONAL"},
+  local:{label:"LOCAL"}
+};
+
+const NATIONAL_LINEAR_TV_TOKENS=[
+  "abc","cbs","fox","nbc","cw","the cw",
+  "espn","espn2","espnu","espnews","espn deportes",
+  "fs1","fox sports 1","fs2","fox sports 2","fox deportes",
+  "tnt","tbs","trutv","tru tv","tru-tv","usa","usa network",
+  "cbs sports network","cbssn",
+  "nfl network","nfln","nfl redzone","redzone",
+  "mlb network","mlbn","nba tv","nbatv","nhl network","nhln",
+  "accn","acc network","secn","sec network","btn","big ten network",
+  "golf channel","tennis channel"
+];
+
+const LOCAL_TEAM_ALIASES=[
+  ["Pittsburgh Steelers",["pittsburgh steelers","steelers"]],
+  ["Pittsburgh Pirates",["pittsburgh pirates","pirates"]],
+  ["Pittsburgh Penguins",["pittsburgh penguins","penguins"]],
+  ["Pittsburgh Riverhounds",["pittsburgh riverhounds","pittsburgh riverhounds sc","riverhounds"]],
+  ["Pitt Panthers",["pitt panthers","pittsburgh panthers","pitt"]],
+  ["Penn State Nittany Lions",["penn state nittany lions","penn state"]],
+  ["West Virginia Mountaineers",["west virginia mountaineers","west virginia","wvu"]],
+  ["Duquesne Dukes",["duquesne dukes","duquesne"]],
+  ["Robert Morris Colonials",["robert morris colonials","robert morris"]],
+  ["Youngstown State Penguins",["youngstown state penguins","youngstown state","ysu"]]
+];
+
 const PROVIDERS={
   directv:{label:"DIRECTV"},
   xfinity:{label:"XFINITY"},
@@ -1111,9 +1177,71 @@ function saveSelectedProvider(provider){
   selectedProvider=PROVIDERS[provider]?provider:"directv";
   localStorage.setItem(PROVIDER_PREFS_KEY,selectedProvider);
 }
+
+function getViewingMode(){
+  const saved=localStorage.getItem(VIEWING_MODE_PREFS_KEY);
+  return VIEWING_MODES[saved]?saved:"standard";
+}
+let selectedViewingMode=getViewingMode();
+
+function saveViewingMode(mode){
+  selectedViewingMode=VIEWING_MODES[mode]?mode:"standard";
+  localStorage.setItem(VIEWING_MODE_PREFS_KEY,selectedViewingMode);
+}
+
+function gameIdentityText(game){
+  return [
+    game?.away,game?.home,game?.name,game?.shortName,game?.title,
+    game?.awayTeam?.name,game?.homeTeam?.name,
+    game?.awayTeam?.displayName,game?.homeTeam?.displayName
+  ].filter(Boolean).join(" • ").toLowerCase();
+}
+
+function isLocalModeGame(game){
+  const text=gameIdentityText(game);
+  if(!text)return false;
+  return LOCAL_TEAM_ALIASES.some(([,aliases])=>aliases.some(alias=>{
+    if(alias==="pitt")return /(^|[^a-z])pitt([^a-z]|$)/.test(text);
+    if(alias==="wvu")return /(^|[^a-z])wvu([^a-z]|$)/.test(text);
+    if(alias==="ysu")return /(^|[^a-z])ysu([^a-z]|$)/.test(text);
+    return text.includes(alias);
+  }));
+}
+
+function isNationalLinearTvGame(game){
+  const network=gameNetworkText(game);
+  if(!network)return false;
+
+  // ESPN+ must not satisfy the plain ESPN token by itself.
+  const cleaned=network
+    .replace(/espn\+/g,"")
+    .replace(/apple tv\+?/g,"")
+    .replace(/amazon prime video|prime video|amazon prime/g,"")
+    .replace(/netflix|peacock|paramount\+|disney\+|hulu|nfl\+|mlb\.tv|mlb tv|nba league pass|nhl\.tv|nhl tv|dazn|hbo max/g,"");
+
+  return NATIONAL_LINEAR_TV_TOKENS.some(token=>{
+    if(token==="espn")return /(^|[^a-z0-9])espn([^a-z0-9]|$)/.test(cleaned);
+    if(token==="fox")return /(^|[^a-z0-9])fox([^a-z0-9]|$)/.test(cleaned);
+    if(token==="cbs")return /(^|[^a-z0-9])cbs([^a-z0-9]|$)/.test(cleaned);
+    if(token==="abc")return /(^|[^a-z0-9])abc([^a-z0-9]|$)/.test(cleaned);
+    if(token==="nbc")return /(^|[^a-z0-9])nbc([^a-z0-9]|$)/.test(cleaned);
+    if(token==="cw")return /(^|[^a-z0-9])cw([^a-z0-9]|$)/.test(cleaned);
+    return cleaned.includes(token);
+  });
+}
+
+function viewingModeMatches(game){
+  if(selectedViewingMode==="national")return isNationalLinearTvGame(game);
+  if(selectedViewingMode==="local")return isLocalModeGame(game);
+  return true;
+}
+function filterGamesForViewingMode(games){
+  return (Array.isArray(games)?games:[]).filter(viewingModeMatches);
+}
+
 let selectedSport="whats-on", selectedDate=new Date(), favoritesOnly=false, currentGames=[];
 let serverTimeBaseMs=null, serverTimePerfBase=null;
-const gamesList=document.getElementById("gamesList"), statusBox=document.getElementById("status"), scheduleTitle=document.getElementById("scheduleTitle"), dateLabel=document.getElementById("dateLabel"), todayNav=document.getElementById("todayNav"), favoritesNav=document.getElementById("favoritesNav"), currentTimeEl=document.getElementById("currentTime"), remainingGamesEl=document.getElementById("remainingGames"), sportTabs=document.getElementById("sportTabs"), settingsBackdrop=document.getElementById("settingsBackdrop"), sportsSettings=document.getElementById("sportsSettings"), providerOptions=document.getElementById("providerOptions"), providerNote=document.getElementById("providerNote");
+const gamesList=document.getElementById("gamesList"), statusBox=document.getElementById("status"), scheduleTitle=document.getElementById("scheduleTitle"), dateLabel=document.getElementById("dateLabel"), todayNav=document.getElementById("todayNav"), favoritesNav=document.getElementById("favoritesNav"), currentTimeEl=document.getElementById("currentTime"), remainingGamesEl=document.getElementById("remainingGames"), sportTabs=document.getElementById("sportTabs"), settingsBackdrop=document.getElementById("settingsBackdrop"), sportsSettings=document.getElementById("sportsSettings"), providerOptions=document.getElementById("providerOptions"), providerNote=document.getElementById("providerNote"), viewingModeOptions=document.getElementById("viewingModeOptions"), viewingModeNote=document.getElementById("viewingModeNote");
 
 
 function getVisibleSportIds(){
@@ -1138,6 +1266,26 @@ function renderSportTabs(){
     .map(s=>`<button data-sport="${s.id}" class="${s.id===selectedSport?"active":""}">${s.tab}</button>`)
     .join("");
   sportTabs.innerHTML=whatsOn+sports;
+}
+
+function renderViewingModeSettings(){
+  if(!viewingModeOptions)return;
+  viewingModeOptions.querySelectorAll("[data-viewing-mode]").forEach(btn=>{
+    btn.classList.toggle("active",btn.dataset.viewingMode===selectedViewingMode);
+  });
+  if(viewingModeNote){
+    const notes={
+      standard:"All available televised and streaming games are eligible.",
+      national:"Only games carried on nationally distributed linear TV networks are shown. Streaming-only paid services such as ESPN+, Apple TV+, Prime Video, Netflix and similar services are excluded unless the same game also has a qualifying national TV broadcast.",
+      local:"Only games involving the approved Pittsburgh / Tri-State teams are shown: Steelers, Pirates, Penguins, Riverhounds, Pitt, Penn State, West Virginia, Duquesne, Robert Morris and Youngstown State."
+    };
+    viewingModeNote.textContent=notes[selectedViewingMode]||"";
+  }
+}
+function applyViewingMode(mode){
+  saveViewingMode(mode);
+  renderViewingModeSettings();
+  loadGames();
 }
 
 function renderProviderSettings(){
@@ -1182,6 +1330,7 @@ function applySportsSettings(){
 }
 
 function openSettings(){
+  renderViewingModeSettings();
   renderProviderSettings();
   renderSportsSettings();
   settingsBackdrop.classList.add("open");
@@ -2078,8 +2227,9 @@ async function loadWhatsOn(){
 
   if(thisLoad!==whatsOnLoadGeneration)return;
   setWtgLoadingMeter(liveSports.length,liveSports.length);
-  currentGames=activeOrFutureGames([...dedupe.values()]);
-  scheduleTitle.textContent=`What's On (${currentGames.length})`;
+  currentGames=filterGamesForViewingMode(activeOrFutureGames([...dedupe.values()]));
+  const modePrefix=selectedViewingMode==="standard"?"":`${VIEWING_MODES[selectedViewingMode].label} • `;
+  scheduleTitle.textContent=`${modePrefix}What's On (${currentGames.length})`;
 
   if(currentGames.length){
     hideStatus();
@@ -2097,7 +2247,11 @@ async function loadWhatsOn(){
     const timedOut=failed>0;
     gamesList.innerHTML=`<div class="whats-empty">${timedOut
       ?`No games loaded successfully. ${failed} sport feed${failed===1?"":"s"} failed or timed out. Tap Today to retry.`
-      :"No live or upcoming televised/streaming games were found for this date."
+      :selectedViewingMode==="national"
+        ?"No nationally televised linear-TV games were found for this date."
+        :selectedViewingMode==="local"
+          ?"No Pittsburgh / Tri-State local-team games were found for this date."
+          :"No live or upcoming televised/streaming games were found for this date."
     }</div>`;
     updateDateMeta();
   }
@@ -2178,8 +2332,8 @@ async function loadGames(){
   }
   setStatus(`${sportMeta?.label||"This sport"} is enabled in 0.1C. Its live schedule and channel feed is the next data connection step.`);
   return
-}setStatus("Loading live games... If the free backend was asleep, this can take up to about a minute.",true);try{const date=toApiDate(selectedDate);const response=await fetch(`${API_BASE}/resolve?sport=${selectedSport}&date=${date}&provider=directv`);if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json();syncServerTime(data.serverTime);currentGames=activeOrFutureGames((Array.isArray(data.games)?data.games:[]).map(game=>({...game,_sportKey:selectedSport})));scheduleTitle.textContent=`${sportLabels[selectedSport]} Games (${currentGames.length})`;if(!currentGames.length){setStatus("No games found for this sport and date.");return}if(isCollegeSport(selectedSport)){renderCollegeFilter();renderProFilter();renderCollegeGames()}else if(isProSport(selectedSport)){renderCollegeFilter();renderProFilter();renderProGames()}else{renderCollegeFilter();renderProFilter();hideStatus();renderGames(currentGames)}}catch(error){console.error(error);setStatus("Could not load live games. The backend may still be waking up; refresh in a moment.")}}
-function loadFavorites(){favoritesOnly=true;updateDateMeta();todayNav.classList.remove("active");favoritesNav.classList.add("active");const favs=getFavorites();currentGames=favs;dateLabel.textContent="Favorites";scheduleTitle.textContent=`Favorite Games (${favs.length})`;if(!favs.length){gamesList.innerHTML="";setStatus("No favorite games yet. Tap ☆ on a game to save it.");return}hideStatus();renderGames(favs)}
+}setStatus("Loading live games... If the free backend was asleep, this can take up to about a minute.",true);try{const date=toApiDate(selectedDate);const response=await fetch(`${API_BASE}/resolve?sport=${selectedSport}&date=${date}&provider=directv`);if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json();syncServerTime(data.serverTime);currentGames=filterGamesForViewingMode(activeOrFutureGames((Array.isArray(data.games)?data.games:[]).map(game=>({...game,_sportKey:selectedSport}))));const modePrefix=selectedViewingMode==="standard"?"":`${VIEWING_MODES[selectedViewingMode].label} • `;scheduleTitle.textContent=`${modePrefix}${sportLabels[selectedSport]} Games (${currentGames.length})`;if(!currentGames.length){setStatus(selectedViewingMode==="national"?"No nationally televised linear-TV games match this sport and date.":selectedViewingMode==="local"?"No Pittsburgh / Tri-State local-team games match this sport and date.":"No games found for this sport and date.");return}if(isCollegeSport(selectedSport)){renderCollegeFilter();renderProFilter();renderCollegeGames()}else if(isProSport(selectedSport)){renderCollegeFilter();renderProFilter();renderProGames()}else{renderCollegeFilter();renderProFilter();hideStatus();renderGames(currentGames)}}catch(error){console.error(error);setStatus("Could not load live games. The backend may still be waking up; refresh in a moment.")}}
+function loadFavorites(){favoritesOnly=true;updateDateMeta();todayNav.classList.remove("active");favoritesNav.classList.add("active");const allFavs=getFavorites();const favs=filterGamesForViewingMode(allFavs);currentGames=favs;dateLabel.textContent="Favorites";const modePrefix=selectedViewingMode==="standard"?"":`${VIEWING_MODES[selectedViewingMode].label} • `;scheduleTitle.textContent=`${modePrefix}Favorite Games (${favs.length})`;if(!favs.length){gamesList.innerHTML="";setStatus(allFavs.length?`No favorite games match ${VIEWING_MODES[selectedViewingMode].label} mode.`:"No favorite games yet. Tap ☆ on a game to save it.");return}hideStatus();renderGames(favs)}
 sportTabs.addEventListener("click",event=>{const button=event.target.closest("button[data-sport]");if(!button)return;selectedSport=button.dataset.sport;if(selectedSport!=="whats-on")whatsOnLoadGeneration++;activeCollegeFilter="all";activeProFilter="all";renderSportTabs();renderCollegeFilter();renderProFilter();loadGames()});
 document.getElementById("collegeFilterStrip").addEventListener("click",event=>{
   const button=event.target.closest("button[data-college-filter]");
@@ -2205,6 +2359,12 @@ providerOptions?.addEventListener("click",e=>{
   applyProvider(btn.dataset.provider);
 });
 
+viewingModeOptions?.addEventListener("click",e=>{
+  const btn=e.target.closest("[data-viewing-mode]");
+  if(!btn)return;
+  applyViewingMode(btn.dataset.viewingMode);
+});
+
 document.getElementById("showAllSports").addEventListener("click",()=>{saveVisibleSportIds(SPORT_CATALOG.map(s=>s.id));renderSportsSettings();renderSportTabs()});
 document.getElementById("coreSportsOnly").addEventListener("click",()=>{saveVisibleSportIds(["nfl","ncaaf","mlb","nhl","collegehockey","nba","ncaab","ncaaw","wnba","racing","golf","tennis","soccer","collegesoccer"]);renderSportsSettings();renderSportTabs();if(selectedSport!=="whats-on"&&!getVisibleSportIds().includes(selectedSport))selectedSport="whats-on";loadGames()});
 document.getElementById("prevDay").addEventListener("click",()=>{selectedDate.setDate(selectedDate.getDate()-1);selectedDate=new Date(selectedDate);loadGames()});
@@ -2216,6 +2376,7 @@ gamesList.addEventListener("click",event=>{const button=event.target.closest(".f
 renderSportTabs();
 renderCollegeFilter();
 renderProFilter();
+renderViewingModeSettings();
 renderSportsSettings();
 updateDateMeta();
 setInterval(updateDateMeta,60000);
