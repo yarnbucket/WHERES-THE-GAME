@@ -276,6 +276,13 @@
       .directv-channel {font-size:21px;}
     }
 
+  
+    .feed-warning{
+      margin-top:10px;padding:11px 13px;border-radius:12px;
+      background:rgba(80,57,12,.70);border:1px solid rgba(212,171,51,.42);
+      color:#ffe59b;font-size:12px;
+    }
+
   </style>
 </head>
 <body>
@@ -652,16 +659,29 @@ function renderWhatsOn(games){
 }
 
 async function fetchSportGamesForWhatsOn(sportKey,date){
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),6500);
   try{
-    const response=await fetch(`${API_BASE}/resolve?sport=${sportKey}&date=${date}&provider=directv`);
-    if(!response.ok)return {games:[],serverTime:null};
+    const response=await fetch(`${API_BASE}/resolve?sport=${sportKey}&date=${date}&provider=directv`,{
+      signal:controller.signal,
+      cache:"no-store"
+    });
+    if(!response.ok)return {games:[],serverTime:null,error:`HTTP ${response.status}`,sportKey};
     const data=await response.json();
     return {
       serverTime:data.serverTime||null,
-      games:(Array.isArray(data.games)?data.games:[]).map(game=>({...game,_sportKey:sportKey}))
+      games:(Array.isArray(data.games)?data.games:[]).map(game=>({...game,_sportKey:sportKey})),
+      sportKey
     };
-  }catch{
-    return {games:[],serverTime:null};
+  }catch(err){
+    return {
+      games:[],
+      serverTime:null,
+      error:err?.name==="AbortError"?"timeout":(err?.message||"request failed"),
+      sportKey
+    };
+  }finally{
+    clearTimeout(timeout);
   }
 }
 
@@ -678,12 +698,45 @@ async function loadWhatsOn(){
   const liveSports=SPORT_CATALOG.filter(s=>s.live&&visible.has(s.id));
   const date=toApiDate(selectedDate);
 
+  if(!liveSports.length){
+    currentGames=[];
+    hideStatus();
+    gamesList.innerHTML=`<div class="whats-empty">No live sports are enabled in Settings.</div>`;
+    updateDateMeta();
+    return;
+  }
+
   const results=[];
   const batchSize=4;
+  let completed=0;
+  let failed=0;
+
   for(let i=0;i<liveSports.length;i+=batchSize){
     const batch=liveSports.slice(i,i+batchSize);
     const batchResults=await Promise.all(batch.map(s=>fetchSportGamesForWhatsOn(s.id,date)));
     results.push(...batchResults);
+    completed+=batchResults.length;
+    failed+=batchResults.filter(r=>r.error).length;
+
+    const partialGames=[];
+    for(const result of results){
+      for(const game of result.games||[])partialGames.push(game);
+    }
+
+    const partialDedupe=new Map();
+    for(const game of partialGames){
+      const key=`${game._sportKey}|${game.id||game.name||""}|${game.startTime||""}`;
+      if(!partialDedupe.has(key))partialDedupe.set(key,game);
+    }
+    currentGames=activeOrFutureGames([...partialDedupe.values()]);
+
+    if(currentGames.length){
+      hideStatus();
+      scheduleTitle.textContent=`What's On (${currentGames.length})`;
+      renderWhatsOn(currentGames);
+    }else{
+      setStatus(`Loading today's games... ${completed}/${liveSports.length}`,true);
+    }
   }
 
   const serverTime=results.map(x=>x.serverTime).find(Boolean);
@@ -691,7 +744,7 @@ async function loadWhatsOn(){
 
   const dedupe=new Map();
   for(const result of results){
-    for(const game of result.games){
+    for(const game of result.games||[]){
       const key=`${game._sportKey}|${game.id||game.name||""}|${game.startTime||""}`;
       if(!dedupe.has(key))dedupe.set(key,game);
     }
@@ -699,8 +752,26 @@ async function loadWhatsOn(){
 
   currentGames=activeOrFutureGames([...dedupe.values()]);
   scheduleTitle.textContent=`What's On (${currentGames.length})`;
-  hideStatus();
-  renderWhatsOn(currentGames);
+
+  if(currentGames.length){
+    hideStatus();
+    renderWhatsOn(currentGames);
+    if(failed){
+      const notice=document.createElement("div");
+      notice.className="whats-empty";
+      notice.style.marginTop="10px";
+      notice.textContent=`Some sports feeds did not respond (${failed}). Showing the games that loaded successfully.`;
+      gamesList.appendChild(notice);
+    }
+  }else{
+    hideStatus();
+    const timedOut=failed>0;
+    gamesList.innerHTML=`<div class="whats-empty">${timedOut
+      ?`No games loaded successfully. ${failed} sport feed${failed===1?"":"s"} failed or timed out. Tap Today to retry.`
+      :"No live or upcoming televised/streaming games were found for this date."
+    }</div>`;
+    updateDateMeta();
+  }
 }
 
 function teamMark(name){
