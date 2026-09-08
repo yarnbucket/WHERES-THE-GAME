@@ -895,7 +895,7 @@
 .game-card{cursor:pointer}
 .game-card .favorite,.game-card a,.game-card button{cursor:pointer}
 
-/* 0.1H8i — Weekly AP Top 25 Team-ID Join + Search + Profiles */
+/* 0.1H8j — Next Game Finder + Weekly AP Top 25 + Profiles */
 .profile-settings-block h3,.favorite-sports-profile-block h3{margin:8px 0;color:#f5fbff;font-size:16px;letter-spacing:.02em}
 .profile-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin-bottom:10px}
 .profile-toolbar select,.profile-team-add input{
@@ -994,7 +994,7 @@
   <div class="game-search-wrap" role="search">
     <span class="game-search-icon" aria-hidden="true">⌕</span>
     <input id="gameSearchInput" class="game-search" type="search"
-      placeholder="Search team or city…"
+      placeholder="Find next game by team or city…"
       autocomplete="off" autocapitalize="words" spellcheck="false"
       aria-label="Search games by team or city">
     <button id="gameSearchClear" class="game-search-clear" type="button"
@@ -1528,45 +1528,80 @@ function updateGameSearchUi(){
   gameSearchClear?.classList.toggle("visible",hasQuery);
 }
 
-function rerenderForGameSearch(){
+let gameSearchGeneration=0;
+
+async function rerenderForGameSearch(){
   updateGameSearchUi();
 
-  if(favoritesOnly){
-    loadFavorites();
+  const rawQuery=String(gameSearchInput?.value||"").trim();
+  const q=getGameSearchQuery();
+
+  if(!q){
+    gameSearchGeneration++;
+    if(favoritesOnly){
+      loadFavorites();
+    }else{
+      loadGames();
+    }
     return;
   }
 
-  if(selectedSport==="whats-on"){
-    renderWhatsOn(currentGames);
-    return;
-  }
-
-  if(isCollegeSport(selectedSport)){
-    renderCollegeGames();
-    return;
-  }
-
-  if(isProSport(selectedSport)){
-    renderProGames();
-    return;
-  }
-
-  const filtered=filterGamesBySearch(currentGames);
-  const label=sportLabels[selectedSport]||"Sports";
-  scheduleTitle.textContent=getGameSearchQuery()
-    ? `${label} • SEARCH (${filtered.length})`
-    : `${label} Games (${filtered.length})`;
-
-  if(!filtered.length){
+  if(q.length<2){
     gamesList.innerHTML="";
-    setStatus(`No games match "${gameSearchInput.value.trim()}" for this date.`);
+    hideStatus();
+    scheduleTitle.textContent="Search";
     return;
   }
 
-  hideStatus();
-  renderGames(filtered);
-}
+  const generation=++gameSearchGeneration;
+  gamesList.innerHTML="";
+  scheduleTitle.textContent=`Finding next game for “${rawQuery}”…`;
+  setStatus("Searching upcoming schedules…",true);
 
+  try{
+    const response=await fetch(
+      `${API_BASE}/resolve/next?q=${encodeURIComponent(rawQuery)}&provider=${encodeURIComponent(selectedProvider||"directv")}`
+    );
+
+    if(!response.ok)throw new Error(`HTTP ${response.status}`);
+
+    const data=await response.json();
+
+    if(generation!==gameSearchGeneration)return;
+
+    const games=(Array.isArray(data.games)?data.games:[])
+      .map(game=>({...game,_sportKey:game._sportKey||selectedSport}))
+      .filter(game=>game?.startTime && new Date(game.startTime).getTime()>=Date.now());
+
+    currentGames=games;
+
+    if(!games.length){
+      // Approved behavior: offseason / no published future game = blank.
+      gamesList.innerHTML="";
+      hideStatus();
+      scheduleTitle.textContent="";
+      return;
+    }
+
+    hideStatus();
+    dateLabel.textContent="Next Game";
+    scheduleTitle.textContent=games.length===1
+      ?`NEXT GAME — ${games[0].searchTeamName||rawQuery}`
+      :`NEXT GAMES — ${rawQuery} (${games.length})`;
+
+    renderCollegeFilter();
+    renderProFilter();
+    renderGames(games);
+  }catch(error){
+    console.error(error);
+
+    if(generation!==gameSearchGeneration)return;
+
+    gamesList.innerHTML="";
+    hideStatus();
+    scheduleTitle.textContent="";
+  }
+}
 function isLocalModeGame(game){
   const text=gameIdentityText(game);
   if(!text)return false;
@@ -2540,7 +2575,7 @@ function renderProFilter(){
   ).join("");
 }
 function renderProGames(){
-  const filtered=sortProGames(filterGamesBySearch(currentGames).filter(g=>proFilterMatches(g,activeProFilter)));
+  const filtered=sortProGames(currentGames.filter(g=>proFilterMatches(g,activeProFilter)));
   const label=sportLabels[selectedSport]||"Sports";
   scheduleTitle.textContent=activeProFilter==="all"
     ?`${label} Games (${filtered.length})`
@@ -2622,7 +2657,7 @@ function renderCollegeFilter(){
 }
 
 function renderCollegeGames(){
-  const source=filterGamesBySearch(Array.isArray(currentGames)?currentGames:[]);
+  const source=Array.isArray(currentGames)?currentGames:[];
   const filtered=sortCollegeGames(source.filter(game=>collegeFilterMatches(game,activeCollegeFilter)));
   const label=sportLabels[selectedSport]||"College Sports";
   const filterLabel=getCollegeFilterSpec(selectedSport).find(x=>x[0]===activeCollegeFilter)?.[1]||activeCollegeFilter.toUpperCase();
@@ -2710,7 +2745,7 @@ function renderWhatsOn(games){
   // 0.1H8b: What's On is TV-only.
   // Streaming-only games remain available in individual sport tabs, but are
   // intentionally excluded from the What's On dashboard.
-  games=filterGamesBySearch(activeOrFutureGames(games));
+  games=activeOrFutureGames(games);
   const televised=sortByPreferences(games.filter(isTelevisedGame));
 
   const section=(title,items,emptyText)=>`
@@ -2954,7 +2989,7 @@ let gameSearchTimer=null;
 gameSearchInput?.addEventListener("input",()=>{
   updateGameSearchUi();
   clearTimeout(gameSearchTimer);
-  gameSearchTimer=setTimeout(rerenderForGameSearch,120);
+  gameSearchTimer=setTimeout(rerenderForGameSearch,450);
 });
 gameSearchInput?.addEventListener("search",()=>{
   updateGameSearchUi();
