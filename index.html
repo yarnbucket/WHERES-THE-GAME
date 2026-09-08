@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Where's the Game?</title>
-  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUALS APPROVED through 0.1F4; 0.1G viewing-source architecture; 0.1G1 mobile card layout; 0.1H provider selection; 0.1H1 Pittsburgh provider mappings; 0.1H2 sports network audit; 0.1H3 stable provider typography; 0.1H4 daily favorites cleanup; 0.1H5 college sports priority; 0.1H6 pro sports priority + NCAA division sorting; 0.1H6a stable Today sorting -->
+  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUALS APPROVED through 0.1F4; 0.1G viewing-source architecture; 0.1G1 mobile card layout; 0.1H provider selection; 0.1H1 Pittsburgh provider mappings; 0.1H2 sports network audit; 0.1H3 stable provider typography; 0.1H4 daily favorites cleanup; 0.1H5 college sports priority; 0.1H6 pro sports priority + NCAA division sorting; 0.1H6a stable Today sorting; 0.1H6b locked What's On order -->
   <style>
     :root{--bg:#f5f8fc;--card:#fff;--ink:#0b1b3a;--muted:#60708d;--blue:#1769e8;--blue2:#e8f2ff;--line:#dce5f0;--shadow:0 8px 24px rgba(23,55,99,.08);--warn:#fff3cd;--warn-ink:#765800;--ok:#eaf8ef;--ok-ink:#166534}
     *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
@@ -1909,15 +1909,30 @@ function preferenceScore(game){
 }
 
 function sortByPreferences(games){
+  // 0.1H6b: deterministic What's On ordering.
+  // Every comparison ends with stable tie-breakers so a later render cannot
+  // reshuffle games that otherwise have the same priority.
   return [...games].sort((a,b)=>{
     const pref=preferenceScore(b)-preferenceScore(a);
     if(pref)return pref;
+
     const aLive=isLiveGame(a),bLive=isLiveGame(b);
     if(aLive!==bLive)return bLive-aLive;
+
     const at=Date.parse(a?.startTime||"");
     const bt=Date.parse(b?.startTime||"");
-    if(Number.isFinite(at)&&Number.isFinite(bt))return at-bt;
-    return 0;
+    if(Number.isFinite(at)&&Number.isFinite(bt)&&at!==bt)return at-bt;
+    if(Number.isFinite(at)!==Number.isFinite(bt))return Number.isFinite(at)?-1:1;
+
+    const sportCmp=String(a?._sportKey||"").localeCompare(String(b?._sportKey||""));
+    if(sportCmp)return sportCmp;
+
+    const nameCmp=String(a?.name||`${a?.away||""} ${a?.home||""}`).localeCompare(
+      String(b?.name||`${b?.away||""} ${b?.home||""}`)
+    );
+    if(nameCmp)return nameCmp;
+
+    return String(a?.id||"").localeCompare(String(b?.id||""));
   });
 }
 
@@ -1967,7 +1982,10 @@ async function fetchSportGamesForWhatsOn(sportKey,date){
   }
 }
 
+let whatsOnLoadGeneration=0;
+
 async function loadWhatsOn(){
+  const thisLoad=++whatsOnLoadGeneration;
   favoritesOnly=false;
   todayNav.classList.add("active");
   favoritesNav.classList.remove("active");
@@ -1999,6 +2017,7 @@ async function loadWhatsOn(){
   for(let i=0;i<liveSports.length;i+=batchSize){
     const batch=liveSports.slice(i,i+batchSize);
     const batchResults=await Promise.all(batch.map(s=>fetchSportGamesForWhatsOn(s.id,date)));
+    if(thisLoad!==whatsOnLoadGeneration)return;
     results.push(...batchResults);
     completed+=batchResults.length;
     failed+=batchResults.filter(r=>r.error).length;
@@ -2016,6 +2035,7 @@ async function loadWhatsOn(){
     }
   }
 
+  if(thisLoad!==whatsOnLoadGeneration)return;
   currentGames=activeOrFutureGames([...dedupe.values()]);
   scheduleTitle.textContent=`What's On (${currentGames.length})`;
 
@@ -2118,7 +2138,7 @@ async function loadGames(){
   return
 }setStatus("Loading live games... If the free backend was asleep, this can take up to about a minute.",true);try{const date=toApiDate(selectedDate);const response=await fetch(`${API_BASE}/resolve?sport=${selectedSport}&date=${date}&provider=directv`);if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json();syncServerTime(data.serverTime);currentGames=activeOrFutureGames((Array.isArray(data.games)?data.games:[]).map(game=>({...game,_sportKey:selectedSport})));scheduleTitle.textContent=`${sportLabels[selectedSport]} Games (${currentGames.length})`;if(!currentGames.length){setStatus("No games found for this sport and date.");return}if(isCollegeSport(selectedSport)){renderCollegeFilter();renderProFilter();renderCollegeGames()}else if(isProSport(selectedSport)){renderCollegeFilter();renderProFilter();renderProGames()}else{renderCollegeFilter();renderProFilter();hideStatus();renderGames(currentGames)}}catch(error){console.error(error);setStatus("Could not load live games. The backend may still be waking up; refresh in a moment.")}}
 function loadFavorites(){favoritesOnly=true;updateDateMeta();todayNav.classList.remove("active");favoritesNav.classList.add("active");const favs=getFavorites();currentGames=favs;dateLabel.textContent="Favorites";scheduleTitle.textContent=`Favorite Games (${favs.length})`;if(!favs.length){gamesList.innerHTML="";setStatus("No favorite games yet. Tap ☆ on a game to save it.");return}hideStatus();renderGames(favs)}
-sportTabs.addEventListener("click",event=>{const button=event.target.closest("button[data-sport]");if(!button)return;selectedSport=button.dataset.sport;activeCollegeFilter="all";activeProFilter="all";renderSportTabs();renderCollegeFilter();renderProFilter();loadGames()});
+sportTabs.addEventListener("click",event=>{const button=event.target.closest("button[data-sport]");if(!button)return;selectedSport=button.dataset.sport;if(selectedSport!=="whats-on")whatsOnLoadGeneration++;activeCollegeFilter="all";activeProFilter="all";renderSportTabs();renderCollegeFilter();renderProFilter();loadGames()});
 document.getElementById("collegeFilterStrip").addEventListener("click",event=>{
   const button=event.target.closest("button[data-college-filter]");
   if(!button)return;
