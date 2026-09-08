@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Where's the Game?</title>
-  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUALS APPROVED through 0.1F4; 0.1G viewing-source architecture; 0.1G1 mobile card layout; 0.1H provider selection; 0.1H1 Pittsburgh provider mappings; 0.1H2 sports network audit; 0.1H3 stable provider typography; 0.1H4 daily favorites cleanup; 0.1H5 college sports priority; 0.1H6 pro sports priority + NCAA division sorting -->
+  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUALS APPROVED through 0.1F4; 0.1G viewing-source architecture; 0.1G1 mobile card layout; 0.1H provider selection; 0.1H1 Pittsburgh provider mappings; 0.1H2 sports network audit; 0.1H3 stable provider typography; 0.1H4 daily favorites cleanup; 0.1H5 college sports priority; 0.1H6 pro sports priority + NCAA division sorting; 0.1H6a stable Today sorting -->
   <style>
     :root{--bg:#f5f8fc;--card:#fff;--ink:#0b1b3a;--muted:#60708d;--blue:#1769e8;--blue2:#e8f2ff;--line:#dce5f0;--shadow:0 8px 24px rgba(23,55,99,.08);--warn:#fff3cd;--warn-ink:#765800;--ok:#eaf8ef;--ok-ink:#166534}
     *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
@@ -1993,32 +1993,16 @@ async function loadWhatsOn(){
   let completed=0;
   let failed=0;
 
+  // 0.1H6a: collect all feed results first.
+  // Do not progressively render partial batches because later batches
+  // can reshuffle the ranked order after the user starts reading it.
   for(let i=0;i<liveSports.length;i+=batchSize){
     const batch=liveSports.slice(i,i+batchSize);
     const batchResults=await Promise.all(batch.map(s=>fetchSportGamesForWhatsOn(s.id,date)));
     results.push(...batchResults);
     completed+=batchResults.length;
     failed+=batchResults.filter(r=>r.error).length;
-
-    const partialGames=[];
-    for(const result of results){
-      for(const game of result.games||[])partialGames.push(game);
-    }
-
-    const partialDedupe=new Map();
-    for(const game of partialGames){
-      const key=`${game._sportKey}|${game.id||game.name||""}|${game.startTime||""}`;
-      if(!partialDedupe.has(key))partialDedupe.set(key,game);
-    }
-    currentGames=activeOrFutureGames([...partialDedupe.values()]);
-
-    if(currentGames.length){
-      hideStatus();
-      scheduleTitle.textContent=`What's On (${currentGames.length})`;
-      renderWhatsOn(currentGames);
-    }else{
-      setStatus(`Loading today's games... ${completed}/${liveSports.length}`,true);
-    }
+    setStatus(`Loading today's games... ${completed}/${liveSports.length}`,true);
   }
 
   const serverTime=results.map(x=>x.serverTime).find(Boolean);
@@ -2038,6 +2022,7 @@ async function loadWhatsOn(){
   if(currentGames.length){
     hideStatus();
     renderWhatsOn(currentGames);
+
     if(failed){
       const notice=document.createElement("div");
       notice.className="whats-empty";
