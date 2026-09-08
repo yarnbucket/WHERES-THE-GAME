@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Where's the Game?</title>
-  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUALS APPROVED through 0.1F4; 0.1G viewing-source architecture -->
+  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUALS APPROVED through 0.1F4; 0.1G viewing-source architecture; 0.1G1 mobile card layout; 0.1H provider selection; 0.1H1 Pittsburgh provider mappings; 0.1H2 sports network audit -->
   <style>
     :root{--bg:#f5f8fc;--card:#fff;--ink:#0b1b3a;--muted:#60708d;--blue:#1769e8;--blue2:#e8f2ff;--line:#dce5f0;--shadow:0 8px 24px rgba(23,55,99,.08);--warn:#fff3cd;--warn-ink:#765800;--ok:#eaf8ef;--ok-ink:#166534}
     *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
@@ -483,6 +483,278 @@
       }
     }
 
+  
+    /* === WTG 0.1G1 MOBILE CARD SPACE-USE REBUILD ===
+       Pixel 9 Pro / modern iPhone portrait first. */
+    @media (max-width:700px){
+      .games{gap:11px !important;}
+
+      .game-card{
+        display:grid !important;
+        grid-template-columns:1fr !important;
+        gap:8px !important;
+        padding:12px 12px 10px !important;
+        border-radius:18px !important;
+      }
+
+      .card-main{
+        display:grid;
+        grid-template-columns:1fr;
+        gap:0;
+        min-width:0;
+      }
+
+      .card-top{
+        min-height:28px;
+        margin-bottom:4px;
+      }
+
+      .game-sport{
+        font-size:11px !important;
+        letter-spacing:.08em;
+      }
+
+      .favorite{
+        width:34px !important;
+        height:34px !important;
+        flex-basis:34px !important;
+        border-radius:10px !important;
+        font-size:19px !important;
+      }
+
+      /* Teams consume the useful width instead of leaving a large dead center. */
+      .matchup{
+        display:grid !important;
+        grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr) !important;
+        align-items:center !important;
+        gap:6px !important;
+        margin:4px 0 8px !important;
+      }
+
+      .team{
+        display:grid !important;
+        grid-template-columns:42px minmax(0,1fr) !important;
+        align-items:center !important;
+        gap:8px !important;
+        min-width:0;
+      }
+
+      .team-mark{
+        display:grid !important;
+        width:42px !important;
+        height:42px !important;
+        border-radius:12px !important;
+        font-size:13px !important;
+      }
+
+      .team-copy{
+        min-width:0;
+      }
+
+      .team-copy span{
+        display:block;
+        font-size:9px !important;
+        line-height:1.05 !important;
+        margin-bottom:3px;
+        white-space:normal !important;
+      }
+
+      .team-copy strong{
+        display:block;
+        font-size:15px !important;
+        line-height:1.02 !important;
+        white-space:normal !important;
+        overflow:visible !important;
+        text-overflow:clip !important;
+      }
+
+      .at-mark{
+        width:30px !important;
+        height:30px !important;
+        font-size:11px !important;
+      }
+
+      /* Put the important viewing info in one efficient line. */
+      .game-meta{
+        display:grid !important;
+        grid-template-columns:auto 8px minmax(0,1fr);
+        align-items:center;
+        gap:7px !important;
+        margin-top:1px;
+      }
+
+      .game-time{
+        font-size:15px !important;
+        line-height:1 !important;
+        white-space:nowrap;
+      }
+
+      .game-network{
+        font-size:11px !important;
+        line-height:1.15 !important;
+        white-space:normal;
+      }
+
+      .meta-dot{
+        font-size:10px;
+      }
+
+      /* Venue no longer gets its own oversized visual row. */
+      .game-venue{
+        margin:7px 0 0 !important;
+        font-size:10px !important;
+        line-height:1.1 !important;
+      }
+
+      .stream-badges{
+        margin-top:7px !important;
+        gap:5px !important;
+      }
+
+      .stream-badges span{
+        min-height:21px !important;
+        padding:2px 7px !important;
+        font-size:9px !important;
+      }
+
+      /* Provider/stream source is a compact information bar. */
+      .directv-box{
+        min-height:54px !important;
+        height:54px !important;
+        display:grid !important;
+        grid-template-columns:76px 74px minmax(0,1fr) !important;
+        align-items:center !important;
+        gap:6px !important;
+        padding:7px 10px !important;
+        margin-top:1px !important;
+        border-radius:13px !important;
+        text-align:left !important;
+      }
+
+      .directv-label{
+        margin:0 !important;
+        font-size:9px !important;
+        line-height:1.05 !important;
+      }
+
+      .directv-channel{
+        margin:0 !important;
+        font-size:22px !important;
+        line-height:1 !important;
+        text-align:center !important;
+      }
+
+      .directv-note{
+        font-size:9px !important;
+        line-height:1.12 !important;
+        text-align:right !important;
+      }
+    }
+
+    /* Narrow iPhones / small Android phones. */
+    @media (max-width:390px){
+      .game-card{
+        padding:11px 10px 9px !important;
+      }
+
+      .team{
+        grid-template-columns:36px minmax(0,1fr) !important;
+        gap:6px !important;
+      }
+
+      .team-mark{
+        width:36px !important;
+        height:36px !important;
+        font-size:11px !important;
+      }
+
+      .team-copy span{
+        font-size:8px !important;
+      }
+
+      .team-copy strong{
+        font-size:13px !important;
+      }
+
+      .matchup{
+        grid-template-columns:minmax(0,1fr) 27px minmax(0,1fr) !important;
+        gap:4px !important;
+      }
+
+      .at-mark{
+        width:27px !important;
+        height:27px !important;
+      }
+
+      .game-time{
+        font-size:13px !important;
+      }
+
+      .game-network{
+        font-size:10px !important;
+      }
+
+      .directv-box{
+        grid-template-columns:62px 66px minmax(0,1fr) !important;
+      }
+
+      .directv-channel{
+        font-size:20px !important;
+      }
+    }
+
+  
+    /* === WTG 0.1H PROVIDER SETTINGS === */
+    .provider-settings-block h3,
+    .sports-settings-title{
+      margin:8px 0 8px;
+      color:#f5fbff;
+      font-size:16px;
+      letter-spacing:.02em;
+    }
+    .provider-options{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:8px;
+      margin:10px 0 9px;
+    }
+    .provider-options button{
+      min-height:44px;
+      padding:10px 11px;
+      border-radius:12px;
+      border:1px solid rgba(77,158,210,.32);
+      background:rgba(5,30,48,.82);
+      color:#b7ccdc;
+      font-weight:900;
+      text-align:left;
+    }
+    .provider-options button.active{
+      color:#fff;
+      background:linear-gradient(180deg,#16adff,#0875ed);
+      border-color:#72ddff;
+      box-shadow:0 0 18px rgba(0,153,255,.36),inset 0 1px 0 rgba(255,255,255,.27);
+    }
+    .provider-note{
+      min-height:34px;
+      margin:4px 0 0;
+      color:#9db3c4;
+      font-size:11px;
+      line-height:1.35;
+    }
+    .settings-divider{
+      height:1px;
+      margin:16px 0;
+      background:linear-gradient(90deg,transparent,rgba(66,167,223,.45),transparent);
+    }
+    @media(max-width:420px){
+      .provider-options{
+        grid-template-columns:1fr;
+      }
+      .provider-options button{
+        min-height:42px;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -517,6 +789,22 @@
       <h2 id="settingsTitle">Sports Settings</h2>
       <button class="settings-close" id="settingsClose" aria-label="Close settings">×</button>
     </div>
+    <div class="provider-settings-block">
+      <h3>TV Provider</h3>
+      <p class="settings-copy">DIRECTV is the default. Choose another provider and Where's the Game will remember it on this device.</p>
+      <div class="provider-options" id="providerOptions">
+        <button type="button" data-provider="directv">DIRECTV</button>
+        <button type="button" data-provider="xfinity">Xfinity / Comcast</button>
+        <button type="button" data-provider="fios">Verizon Fios</button>
+        <button type="button" data-provider="sling">Sling</button>
+        <button type="button" data-provider="streaming">Streaming Only</button>
+      </div>
+      <p class="provider-note" id="providerNote"></p>
+    </div>
+
+    <div class="settings-divider"></div>
+
+    <h3 class="sports-settings-title">Sports</h3>
     <p class="settings-copy">Choose which sports appear across the top of Where's the Game. Hidden sports stay available and can be turned back on anytime.</p>
     <div class="settings-actions">
       <button id="showAllSports">Show all</button>
@@ -578,9 +866,137 @@ const SPORT_CATALOG=[
 ];
 const sportLabels=Object.fromEntries(SPORT_CATALOG.map(s=>[s.id,s.label]));
 const SPORT_PREFS_KEY="wtg-visible-sports-v1";
+const PROVIDER_PREFS_KEY="wtg-tv-provider-v1";
+const PROVIDERS={
+  directv:{label:"DIRECTV"},
+  xfinity:{label:"XFINITY"},
+  fios:{label:"VERIZON FIOS"},
+  sling:{label:"SLING"},
+  streaming:{label:"STREAMING"}
+};
+
+const DIRECTV_NETWORK_MAP={
+  "ESPN":"206",
+  "ESPN2":"209",
+  "ESPNEWS":"207",
+  "ESPNU":"208",
+  "NFL NETWORK":"212",
+  "NFL REDZONE":"211",
+  "MLB NETWORK":"213",
+  "NHL NETWORK":"215",
+  "NBA TV":"216",
+  "FS1":"219",
+  "CBS SPORTS NETWORK":"221",
+  "USA":"242",
+  "TNT":"245",
+  "TRUTV":"246",
+  "TBS":"247",
+  "FANDUEL TV":"602",
+  "BIG TEN NETWORK":"610",
+  "SEC NETWORK":"611",
+  "ACC NETWORK":"612",
+  "FS2":"618",
+  "SPORTSNET PITTSBURGH":"659",
+  "SPORTSNET PITTSBURGH PLUS":"659-1",
+  "ESPN DEPORTES":"466"
+};
+
+const PITTSBURGH_PROVIDER_MAPS={
+  xfinity:{
+    "ABC":"4 / 804 HD",
+    "CBS":"2 / 802 HD",
+    "FOX":"7 / 803 HD",
+    "NBC":"11 / 811 HD",
+    "CW":"10 / 812 HD",
+    "ESPN":"27 / 850 HD",
+    "ESPN2":"28 / 851 HD",
+    "TBS":"23 / 826 HD",
+    "USA":"25 / 823 HD",
+    "SPORTSNET PITTSBURGH PLUS":"262",
+    "SPORTSNET PITTSBURGH":"29"
+  },
+  fios:{
+    "ABC":"4 / 504 HD",
+    "CBS":"2 / 502 HD",
+    "FOX":"7 / 507 HD",
+    "NBC":"11 / 511 HD",
+    "CW":"3 / 503 HD"
+  }
+};
+
+const NETWORK_ALIASES=[
+  ["SPORTSNET PITTSBURGH PLUS",["SPORTSNET PITTSBURGH PLUS","SPORTSNET PITTSBURGH+","SNP+","SNP PLUS"]],
+  ["SPORTSNET PITTSBURGH",["SPORTSNET PITTSBURGH","AT&T SPORTSNET PITTSBURGH","ATT SPORTSNET PITTSBURGH","SNP"]],
+  ["CBS SPORTS NETWORK",["CBS SPORTS NETWORK","CBS SPORTS NET","CBSSN","CBS SN"]],
+  ["BIG TEN NETWORK",["BIG TEN NETWORK","BIG TEN NET","BTN"]],
+  ["ACC NETWORK",["ACC NETWORK","ACCN"]],
+  ["SEC NETWORK",["SEC NETWORK","SECN"]],
+  ["NFL REDZONE",["NFL REDZONE","NFL RED ZONE","REDZONE"]],
+  ["NFL NETWORK",["NFL NETWORK","NFLN"]],
+  ["MLB NETWORK",["MLB NETWORK","MLBN"]],
+  ["NBA TV",["NBA TV","NBATV"]],
+  ["NHL NETWORK",["NHL NETWORK","NHLN"]],
+  ["GOLF CHANNEL",["GOLF CHANNEL","GOLF CH"]],
+  ["TENNIS CHANNEL",["TENNIS CHANNEL","TENNIS CH"]],
+  ["ESPN DEPORTES",["ESPN DEPORTES"]],
+  ["FOX DEPORTES",["FOX DEPORTES"]],
+  ["ESPNEWS",["ESPNEWS","ESPN NEWS"]],
+  ["ESPNU",["ESPNU"]],
+  ["ESPN2",["ESPN2","ESPN 2"]],
+  ["ESPN",["ESPN"]],
+  ["FS2",["FS2","FOX SPORTS 2"]],
+  ["FS1",["FS1","FOX SPORTS 1"]],
+  ["TRUTV",["TRUTV","TRU TV","TRU-TV"]],
+  ["TNT",["TNT"]],
+  ["TBS",["TBS"]],
+  ["USA",["USA NETWORK","USA"]],
+  ["FANDUEL TV",["FANDUEL TV"]],
+  ["ABC",["ABC","WTAE"]],
+  ["CBS",["CBS","KDKA"]],
+  ["FOX",["FOX","WPGH"]],
+  ["NBC",["NBC","WPXI"]],
+  ["CW",["THE CW","CW","WPNT","WPCW"]]
+];
+
+function normalizeNetworkKey(raw){
+  const s=String(raw||"").toUpperCase().replace(/\s+/g," ").trim();
+  for(const [key,tokens] of NETWORK_ALIASES){
+    if(tokens.some(t=>s.includes(t)))return key;
+  }
+  return "";
+}
+
+function getMappedProviderChannel(provider,game){
+  const map=PITTSBURGH_PROVIDER_MAPS[provider];
+  if(!map)return null;
+  const network=game.broadcast||game.network||"";
+  const key=normalizeNetworkKey(network);
+  if(!key)return null;
+  return {channel:map[key]||null,network:key};
+}
+
+function getDirectvFallback(game){
+  const network=game.broadcast||game.network||"";
+  const key=normalizeNetworkKey(network);
+  if(!key)return null;
+  const channel=DIRECTV_NETWORK_MAP[key];
+  return channel?{channel,network:key}:null;
+}
+
+function getSelectedProvider(){
+  const saved=localStorage.getItem(PROVIDER_PREFS_KEY);
+  return PROVIDERS[saved]?saved:"directv";
+}
+
+let selectedProvider=getSelectedProvider();
+
+function saveSelectedProvider(provider){
+  selectedProvider=PROVIDERS[provider]?provider:"directv";
+  localStorage.setItem(PROVIDER_PREFS_KEY,selectedProvider);
+}
 let selectedSport="whats-on", selectedDate=new Date(), favoritesOnly=false, currentGames=[];
 let serverTimeBaseMs=null, serverTimePerfBase=null;
-const gamesList=document.getElementById("gamesList"), statusBox=document.getElementById("status"), scheduleTitle=document.getElementById("scheduleTitle"), dateLabel=document.getElementById("dateLabel"), todayNav=document.getElementById("todayNav"), favoritesNav=document.getElementById("favoritesNav"), currentTimeEl=document.getElementById("currentTime"), remainingGamesEl=document.getElementById("remainingGames"), sportTabs=document.getElementById("sportTabs"), settingsBackdrop=document.getElementById("settingsBackdrop"), sportsSettings=document.getElementById("sportsSettings");
+const gamesList=document.getElementById("gamesList"), statusBox=document.getElementById("status"), scheduleTitle=document.getElementById("scheduleTitle"), dateLabel=document.getElementById("dateLabel"), todayNav=document.getElementById("todayNav"), favoritesNav=document.getElementById("favoritesNav"), currentTimeEl=document.getElementById("currentTime"), remainingGamesEl=document.getElementById("remainingGames"), sportTabs=document.getElementById("sportTabs"), settingsBackdrop=document.getElementById("settingsBackdrop"), sportsSettings=document.getElementById("sportsSettings"), providerOptions=document.getElementById("providerOptions"), providerNote=document.getElementById("providerNote");
 
 
 function getVisibleSportIds(){
@@ -607,6 +1023,29 @@ function renderSportTabs(){
   sportTabs.innerHTML=whatsOn+sports;
 }
 
+function renderProviderSettings(){
+  if(!providerOptions)return;
+  providerOptions.querySelectorAll("[data-provider]").forEach(btn=>{
+    btn.classList.toggle("active",btn.dataset.provider===selectedProvider);
+  });
+  if(providerNote){
+    const notes={
+      directv:"Default provider. Audited national sports-network fallbacks are used when the live feed names a known network but the backend channel object is missing.",
+      xfinity:"Pittsburgh mapping enabled for verified local channels plus selected sports networks. Unverified networks still show the network name instead of a guessed number.",
+      fios:"Pittsburgh local-channel mapping enabled for verified ABC/CBS/FOX/NBC/CW channels. Other networks remain network-name only until verified.",
+      sling:"Sling does not use traditional channel numbers. The carried network/service is shown.",
+      streaming:"Only direct streaming services are emphasized. Linear TV channels are not treated as the primary source."
+    };
+    providerNote.textContent=notes[selectedProvider]||"";
+  }
+}
+
+function applyProvider(provider){
+  saveSelectedProvider(provider);
+  renderProviderSettings();
+  loadGames();
+}
+
 function renderSportsSettings(){
   const visible=getVisibleSportIds();
   sportsSettings.innerHTML=SPORT_CATALOG.map(s=>`
@@ -626,6 +1065,7 @@ function applySportsSettings(){
 }
 
 function openSettings(){
+  renderProviderSettings();
   renderSportsSettings();
   settingsBackdrop.classList.add("open");
   settingsBackdrop.setAttribute("aria-hidden","false");
@@ -769,6 +1209,8 @@ function getDirectvDisplay(game,conflictKeys=new Set()){
     const first=guide[0];
     return{channel:`${first.channel}${first.hd?" HD":""}`,note:first.feed||game?.directvGuide?.package||first.network||"DIRECTV Sports Guide"};
   }
+  const fallback=getDirectvFallback(game);
+  if(fallback)return{channel:fallback.channel,note:fallback.network};
   const pkg=game?.leaguePackage;
   if(pkg?.name)return{channel:"TBD",note:"Channel not assigned yet"};
   return{channel:"TBD",note:"Channel not assigned yet"};
@@ -778,38 +1220,98 @@ function getDirectvDisplay(game,conflictKeys=new Set()){
 function getViewingSourceDisplay(game,conflictKeys=new Set()){
   const directv=getDirectvDisplay(game,conflictKeys);
   const streams=getStreamingServices(game);
-  const hasProvider=hasDirectvChannel(game);
+  const network=(game.broadcast||game.network||"").trim();
+  const hasDirectv=hasDirectvChannel(game);
 
-  // Provider channel is known: keep DIRECTV primary, but expose verified streams too.
-  if(hasProvider){
-    return {
-      label:"DIRECTV",
-      channel:directv.channel,
-      note:streams.length
-        ?`${directv.note} • Also: ${streams.join(", ")}`
-        :directv.note,
+  if(selectedProvider==="directv"){
+    if(hasDirectv){
+      return{
+        label:"DIRECTV",
+        channel:directv.channel,
+        note:streams.length?`${directv.note} • Also: ${streams.join(", ")}`:directv.note,
+        streams
+      };
+    }
+    if(streams.length){
+      return{
+        label:"STREAMING",
+        channel:streams[0],
+        note:streams.length>1?`Also: ${streams.slice(1).join(", ")}`:"Verified streaming source",
+        streams
+      };
+    }
+    return{label:"DIRECTV",channel:directv.channel,note:directv.note,streams:[]};
+  }
+
+  if(selectedProvider==="streaming"){
+    if(streams.length){
+      return{
+        label:"STREAMING",
+        channel:streams[0],
+        note:streams.length>1?`Also: ${streams.slice(1).join(", ")}`:"Direct stream",
+        streams
+      };
+    }
+    return{
+      label:"STREAMING",
+      channel:"—",
+      note:network?`${network} • No direct stream listed`:"No direct stream listed",
+      streams:[]
+    };
+  }
+
+  if(selectedProvider==="sling"){
+    if(streams.length){
+      return{
+        label:"SLING / STREAM",
+        channel:network||streams[0],
+        note:`Streaming: ${streams.join(", ")}`,
+        streams
+      };
+    }
+    return{
+      label:"SLING",
+      channel:network||"TBD",
+      note:network?"Network availability depends on Sling plan/market":"Availability TBD",
+      streams:[]
+    };
+  }
+
+  if(selectedProvider==="xfinity"||selectedProvider==="fios"){
+    const label=PROVIDERS[selectedProvider].label;
+    const mapped=getMappedProviderChannel(selectedProvider,game);
+
+    if(mapped?.channel){
+      return{
+        label,
+        channel:mapped.channel,
+        note:streams.length
+          ?`${mapped.network} • Also: ${streams.join(", ")}`
+          :mapped.network,
+        streams
+      };
+    }
+
+    if(streams.length && !network){
+      return{
+        label:"STREAMING",
+        channel:streams[0],
+        note:streams.length>1?`Also: ${streams.slice(1).join(", ")}`:"Verified streaming source",
+        streams
+      };
+    }
+
+    return{
+      label,
+      channel:network||"TBD",
+      note:network
+        ?`Pittsburgh mapping not verified for this network${streams.length?` • Also: ${streams.join(", ")}`:""}`
+        :"Channel mapping not verified yet",
       streams
     };
   }
 
-  // No linear-provider channel, but a verified streaming source exists:
-  // streaming is the primary viewing source, never DIRECTV TBD.
-  if(streams.length){
-    return {
-      label:streams.length>1?"STREAMING":"STREAMING",
-      channel:streams[0],
-      note:streams.length>1?`Also: ${streams.slice(1).join(", ")}`:"Verified streaming source",
-      streams
-    };
-  }
-
-  // Linear/package information exists but the exact provider channel is unresolved.
-  return {
-    label:"DIRECTV",
-    channel:directv.channel,
-    note:directv.note,
-    streams:[]
-  };
+  return{label:"DIRECTV",channel:directv.channel,note:directv.note,streams};
 }
 
 function renderStreamingBadges(game){
@@ -853,10 +1355,15 @@ function getStreamingServices(game){
 }
 
 const TV_NETWORK_TOKENS=[
-  "abc","cbs","fox","nbc","espn2","espnu","espnews","accn","acc network",
-  "sec network","big ten network","btn","fs1","fs2","tnt","tbs","trutv","usa",
-  "cw","the cw","nfl network","mlb network","nba tv","nhl network",
-  "cbs sports network","sportsnet"
+  "abc","cbs","fox","nbc","cw","the cw",
+  "espn2","espnu","espnews","espn deportes",
+  "accn","acc network","secn","sec network","btn","big ten network",
+  "fs1","fox sports 1","fs2","fox sports 2","fox deportes",
+  "tnt","tbs","trutv","tru tv","tru-tv","usa","usa network",
+  "nfl network","nfln","nfl redzone","redzone",
+  "mlb network","mlbn","nba tv","nbatv","nhl network","nhln",
+  "cbs sports network","cbssn","golf channel","tennis channel",
+  "sportsnet pittsburgh","sportsnet","fanduel tv"
 ];
 
 function gameNetworkText(game){
@@ -866,7 +1373,7 @@ function gameNetworkText(game){
 function hasDirectvChannel(game){
   const options=Array.isArray(game?.directv)?game.directv:[];
   const guide=Array.isArray(game?.directvGuide?.channels)?game.directvGuide.channels:[];
-  return options.some(x=>x?.directvChannel)||guide.some(x=>x?.channel);
+  return options.some(x=>x?.directvChannel)||guide.some(x=>x?.channel)||Boolean(getDirectvFallback(game));
 }
 
 function isStreamingOnlyGame(game){
@@ -1127,6 +1634,12 @@ document.querySelector(".gear").addEventListener("click",openSettings);
 document.getElementById("settingsClose").addEventListener("click",closeSettings);
 settingsBackdrop.addEventListener("click",event=>{if(event.target===settingsBackdrop)closeSettings()});
 sportsSettings.addEventListener("change",applySportsSettings);
+providerOptions?.addEventListener("click",e=>{
+  const btn=e.target.closest("[data-provider]");
+  if(!btn)return;
+  applyProvider(btn.dataset.provider);
+});
+
 document.getElementById("showAllSports").addEventListener("click",()=>{saveVisibleSportIds(SPORT_CATALOG.map(s=>s.id));renderSportsSettings();renderSportTabs()});
 document.getElementById("coreSportsOnly").addEventListener("click",()=>{saveVisibleSportIds(["nfl","ncaaf","mlb","nhl","collegehockey","nba","ncaab","ncaaw","wnba","racing","golf","tennis","soccer","collegesoccer"]);renderSportsSettings();renderSportTabs();if(selectedSport!=="whats-on"&&!getVisibleSportIds().includes(selectedSport))selectedSport="whats-on";loadGames()});
 document.getElementById("prevDay").addEventListener("click",()=>{selectedDate.setDate(selectedDate.getDate()-1);selectedDate=new Date(selectedDate);loadGames()});
