@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Where's the Game?</title>
-  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUALS APPROVED through 0.1F4; 0.1G viewing-source architecture; 0.1G1 mobile card layout; 0.1H provider selection; 0.1H1 Pittsburgh provider mappings; 0.1H2 sports network audit; 0.1H3 stable provider typography; 0.1H4 daily favorites cleanup; 0.1H5 college sports priority; 0.1H6 pro sports priority + NCAA division sorting; 0.1H6a stable Today sorting; 0.1H6b locked What's On order; 0.1H7 branded gold loading meter; 0.1H8 Standard/National/Local viewing modes -->
+  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUALS APPROVED through 0.1F4; 0.1G viewing-source architecture; 0.1G1 mobile card layout; 0.1H provider selection; 0.1H1 Pittsburgh provider mappings; 0.1H2 sports network audit; 0.1H3 stable provider typography; 0.1H4 daily favorites cleanup; 0.1H5 college sports priority; 0.1H6 pro sports priority + NCAA division sorting; 0.1H6a stable Today sorting; 0.1H6b locked What's On order; 0.1H7 branded gold loading meter; 0.1H8 Standard/National/Local viewing modes; 0.1H8a What's On pro-first hierarchy -->
   <style>
     :root{--bg:#f5f8fc;--card:#fff;--ink:#0b1b3a;--muted:#60708d;--blue:#1769e8;--blue2:#e8f2ff;--line:#dce5f0;--shadow:0 8px 24px rgba(23,55,99,.08);--warn:#fff3cd;--warn-ink:#765800;--ok:#eaf8ef;--ok-ink:#166534}
     *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
@@ -2078,11 +2078,21 @@ function preferenceScore(game){
   return score;
 }
 
+function whatsOnGroup(game){
+  // 0.1H8a locked top-level What's On hierarchy:
+  // professional games first, college games second, everything else third.
+  if(isProSport(game?._sportKey))return 0;
+  if(isCollegeSport(game))return 1;
+  return 2;
+}
+
 function sortByPreferences(games){
-  // 0.1H6b: deterministic What's On ordering.
-  // Every comparison ends with stable tie-breakers so a later render cannot
-  // reshuffle games that otherwise have the same priority.
+  // 0.1H8a: group is authoritative before the existing ranking hierarchy.
+  // This prevents a high-priority college game from jumping above any pro game.
   return [...games].sort((a,b)=>{
+    const group=whatsOnGroup(a)-whatsOnGroup(b);
+    if(group)return group;
+
     const pref=preferenceScore(b)-preferenceScore(a);
     if(pref)return pref;
 
