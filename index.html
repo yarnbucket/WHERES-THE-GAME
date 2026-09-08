@@ -1110,6 +1110,14 @@ const VIEWING_MODE_PREFS_KEY="wtg-viewing-mode-v1";
 const PROFILE_STORE_KEY="wtg-user-profiles-v1";
 const ACTIVE_PROFILE_KEY="wtg-active-profile-v1";
 
+function escapeHtml(value){
+  return String(value??"")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#39;");
+}
 function cleanTeamName(value){
   return String(value||"").replace(/\s+/g," ").trim();
 }
@@ -1594,12 +1602,16 @@ function toggleFavoriteSport(sportId){
 }
 
 function openSettings(){
-  renderProfileSettings();
-  renderViewingModeSettings();
-  renderProviderSettings();
-  renderSportsSettings();
   settingsBackdrop.classList.add("open");
   settingsBackdrop.setAttribute("aria-hidden","false");
+  try{
+    renderProfileSettings();
+    renderViewingModeSettings();
+    renderProviderSettings();
+    renderSportsSettings();
+  }catch(error){
+    console.error("Settings render error:",error);
+  }
 }
 
 function closeSettings(){
