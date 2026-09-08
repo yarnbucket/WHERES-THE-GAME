@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Where's the Game?</title>
-  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUAL BETA 0.1F2 using user-provided stadium artwork -->
+  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUALS APPROVED through 0.1F4; 0.1G viewing-source architecture -->
   <style>
     :root{--bg:#f5f8fc;--card:#fff;--ink:#0b1b3a;--muted:#60708d;--blue:#1769e8;--blue2:#e8f2ff;--line:#dce5f0;--shadow:0 8px 24px rgba(23,55,99,.08);--warn:#fff3cd;--warn-ink:#765800;--ok:#eaf8ef;--ok-ink:#166534}
     *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
@@ -434,6 +434,55 @@
       }
     }
 
+  
+    /* === WTG 0.1G VIEWING-SOURCE ARCHITECTURE === */
+    .stream-badges{
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      margin-top:9px;
+    }
+    .stream-badges span{
+      display:inline-flex;
+      align-items:center;
+      min-height:24px;
+      padding:4px 9px;
+      border-radius:999px;
+      color:#dff7ff;
+      background:rgba(9,77,112,.72);
+      border:1px solid rgba(70,190,245,.38);
+      font-size:10px;
+      font-weight:900;
+      letter-spacing:.02em;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.07);
+    }
+    .directv-channel{
+      overflow-wrap:anywhere;
+      word-break:normal;
+    }
+    @media(max-width:700px){
+      .stream-badges span{
+        font-size:10px;
+        min-height:25px;
+        padding:4px 8px;
+      }
+      .directv-box{
+        grid-template-columns:78px minmax(92px,auto) minmax(0,1fr) !important;
+      }
+      .directv-channel{
+        font-size:20px !important;
+        line-height:1.05 !important;
+      }
+    }
+    @media(max-width:420px){
+      .directv-box{
+        grid-template-columns:68px minmax(82px,auto) minmax(0,1fr) !important;
+      }
+      .directv-channel{
+        font-size:18px !important;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -726,11 +775,82 @@ function getDirectvDisplay(game,conflictKeys=new Set()){
 }
 
 
-const STREAMING_ONLY_TOKENS=[
-  "espn+","espn plus","peacock","netflix","prime video","amazon prime",
-  "apple tv+","apple tv","paramount+","paramount plus","hulu","tubi",
-  "youtube","dazn","max"
+function getViewingSourceDisplay(game,conflictKeys=new Set()){
+  const directv=getDirectvDisplay(game,conflictKeys);
+  const streams=getStreamingServices(game);
+  const hasProvider=hasDirectvChannel(game);
+
+  // Provider channel is known: keep DIRECTV primary, but expose verified streams too.
+  if(hasProvider){
+    return {
+      label:"DIRECTV",
+      channel:directv.channel,
+      note:streams.length
+        ?`${directv.note} • Also: ${streams.join(", ")}`
+        :directv.note,
+      streams
+    };
+  }
+
+  // No linear-provider channel, but a verified streaming source exists:
+  // streaming is the primary viewing source, never DIRECTV TBD.
+  if(streams.length){
+    return {
+      label:streams.length>1?"STREAMING":"STREAMING",
+      channel:streams[0],
+      note:streams.length>1?`Also: ${streams.slice(1).join(", ")}`:"Verified streaming source",
+      streams
+    };
+  }
+
+  // Linear/package information exists but the exact provider channel is unresolved.
+  return {
+    label:"DIRECTV",
+    channel:directv.channel,
+    note:directv.note,
+    streams:[]
+  };
+}
+
+function renderStreamingBadges(game){
+  const streams=getStreamingServices(game);
+  if(!streams.length)return "";
+  return `<div class="stream-badges">${streams.map(name=>`<span>${name}</span>`).join("")}</div>`;
+}
+
+
+const STREAMING_SERVICES=[
+  {name:"Netflix",tokens:["netflix"]},
+  {name:"Apple TV",tokens:["apple tv+","apple tv plus","apple tv"]},
+  {name:"Prime Video",tokens:["prime video","amazon prime"]},
+  {name:"Peacock",tokens:["peacock"]},
+  {name:"Paramount+",tokens:["paramount+","paramount plus"]},
+  {name:"ESPN+",tokens:["espn+","espn plus"]},
+  {name:"Disney+",tokens:["disney+","disney plus"]},
+  {name:"Hulu",tokens:["hulu"]},
+  {name:"NFL+",tokens:["nfl+","nfl plus"]},
+  {name:"MLB.TV",tokens:["mlb.tv","mlb tv"]},
+  {name:"NBA League Pass",tokens:["nba league pass","league pass"]},
+  {name:"NHL.TV",tokens:["nhl.tv","nhl tv"]},
+  {name:"Max",tokens:["hbo max","max"]},
+  {name:"DAZN",tokens:["dazn"]},
+  {name:"Tubi",tokens:["tubi"]},
+  {name:"YouTube",tokens:["youtube"]},
+  {name:"Fubo",tokens:["fubo"]},
+  {name:"Sling",tokens:["sling"]}
 ];
+
+const STREAMING_ONLY_TOKENS=STREAMING_SERVICES.flatMap(service=>service.tokens);
+
+function getStreamingServices(game){
+  const network=gameNetworkText(game);
+  if(!network)return [];
+  const found=[];
+  for(const service of STREAMING_SERVICES){
+    if(service.tokens.some(token=>network.includes(token)))found.push(service.name);
+  }
+  return [...new Set(found)];
+}
 
 const TV_NETWORK_TOKENS=[
   "abc","cbs","fox","nbc","espn2","espnu","espnews","accn","acc network",
@@ -939,7 +1059,7 @@ function teamParts(name){
   return {small:words.slice(0,-1).join(" "),big:words[words.length-1]};
 }
 function renderGame(game,conflictKeys){
-  const d=getDirectvDisplay(game,conflictKeys),favorite=isFavorite(game.id);
+  const d=getViewingSourceDisplay(game,conflictKeys),favorite=isFavorite(game.id);
   const hasTeams=game.away&&game.home;
   const baseSportLabel=sportLabels[game?._sportKey]||game.sport||sportLabels[selectedSport]||"Sports";
   const sportLine=game.series?`${baseSportLabel} • ${game.series}`:baseSportLabel;
@@ -977,10 +1097,11 @@ function renderGame(game,conflictKeys){
         <span class="meta-dot">•</span>
         <span class="game-network">${network}</span>
       </div>
+      ${renderStreamingBadges(game)}
       ${venue?`<div class="game-venue"><span class="venue-glyph">◉</span>${venue}</div>`:""}
     </div>
     <div class="directv-box">
-      <div class="directv-label">DIRECTV</div>
+      <div class="directv-label">${d.label}</div>
       <div class="directv-channel">${d.channel}</div>
       <div class="directv-note">${d.note}</div>
     </div>
