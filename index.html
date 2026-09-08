@@ -895,7 +895,7 @@
 .game-card{cursor:pointer}
 .game-card .favorite,.game-card a,.game-card button{cursor:pointer}
 
-/* 0.1H8g2 — Top 25 Ranking Source Repair + Profiles */
+/* 0.1H8h — Team / City Game Search + Top 25 + Profiles */
 .profile-settings-block h3,.favorite-sports-profile-block h3{margin:8px 0;color:#f5fbff;font-size:16px;letter-spacing:.02em}
 .profile-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin-bottom:10px}
 .profile-toolbar select,.profile-team-add input{
@@ -931,6 +931,49 @@
   .profile-buttons button{flex:1}
 }
 
+
+/* 0.1H8h — Game Search */
+.game-search-wrap{
+  margin:-4px 0 14px;
+  position:relative;
+}
+.game-search{
+  width:100%;
+  box-sizing:border-box;
+  border:1px solid rgba(68,180,255,.42);
+  background:rgba(4,22,36,.86);
+  color:#f4fbff;
+  border-radius:14px;
+  padding:12px 42px 12px 42px;
+  font-size:16px;
+  font-weight:800;
+  outline:none;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.025),0 0 18px rgba(16,147,255,.08);
+}
+.game-search::placeholder{color:#88a7bb;font-weight:700}
+.game-search:focus{
+  border-color:#27b5ff;
+  box-shadow:0 0 0 2px rgba(39,181,255,.14),0 0 22px rgba(39,181,255,.16);
+}
+.game-search-icon{
+  position:absolute;left:14px;top:50%;transform:translateY(-50%);
+  pointer-events:none;font-size:18px;color:#8bd4ff
+}
+.game-search-clear{
+  position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  width:32px;height:32px;border:0;border-radius:50%;
+  background:transparent;color:#9cb4c3;font-size:22px;font-weight:900;cursor:pointer;
+  display:none;align-items:center;justify-content:center
+}
+.game-search-clear.visible{display:flex}
+.search-result-note{
+  margin:0 0 10px;color:#91bcd5;font-size:12px;font-weight:800;letter-spacing:.02em
+}
+@media(max-width:430px){
+  .game-search-wrap{margin-top:-2px;margin-bottom:12px}
+  .game-search{font-size:15px;padding-top:11px;padding-bottom:11px}
+}
+
 </style>
 </head>
 <body>
@@ -946,6 +989,17 @@
     </div>
     <button class="gear" title="Settings" aria-label="Settings">⚙</button>
   </header>
+
+
+  <div class="game-search-wrap" role="search">
+    <span class="game-search-icon" aria-hidden="true">⌕</span>
+    <input id="gameSearchInput" class="game-search" type="search"
+      placeholder="Search team or city…"
+      autocomplete="off" autocapitalize="words" spellcheck="false"
+      aria-label="Search games by team or city">
+    <button id="gameSearchClear" class="game-search-clear" type="button"
+      aria-label="Clear game search">×</button>
+  </div>
 
   <div class="sport-tabs" id="sportTabs" aria-label="Sports"></div>
   <div class="college-filter-strip" id="collegeFilterStrip" aria-label="College sports filters" hidden></div>
@@ -1396,6 +1450,123 @@ function gameIdentityText(game){
   ].filter(Boolean).join(" • ").toLowerCase();
 }
 
+
+function normalizeGameSearchText(value){
+  return String(value||"")
+    .toLowerCase()
+    .replace(/&/g," and ")
+    .replace(/[^a-z0-9]+/g," ")
+    .replace(/\s+/g," ")
+    .trim();
+}
+
+function gameSearchText(game){
+  const competitors=Array.isArray(game?.competitors)
+    ? game.competitors
+    : Array.isArray(game?.competition?.competitors)
+      ? game.competition.competitors
+      : [];
+
+  const participantNames=[];
+  for(const c of competitors){
+    participantNames.push(
+      c?.team?.displayName,
+      c?.team?.shortDisplayName,
+      c?.team?.name,
+      c?.team?.location,
+      c?.displayName,
+      c?.name
+    );
+  }
+
+  const venueCity =
+    game?.venue?.address?.city ||
+    game?.venue?.city ||
+    game?.city ||
+    game?.location?.city ||
+    game?.address?.city ||
+    "";
+
+  return normalizeGameSearchText([
+    game?.away,
+    game?.home,
+    game?.name,
+    game?.shortName,
+    game?.title,
+    game?.awayTeam?.name,
+    game?.homeTeam?.name,
+    game?.awayTeam?.displayName,
+    game?.homeTeam?.displayName,
+    game?.awayTeam?.location,
+    game?.homeTeam?.location,
+    game?.participants,
+    participantNames.join(" "),
+    venueCity
+  ].filter(Boolean).join(" "));
+}
+
+function getGameSearchQuery(){
+  return normalizeGameSearchText(gameSearchInput?.value||"");
+}
+
+function gameMatchesSearch(game){
+  const q=getGameSearchQuery();
+  if(!q)return true;
+  const haystack=gameSearchText(game);
+  if(!haystack)return false;
+  const terms=q.split(" ").filter(Boolean);
+  return terms.every(term=>haystack.includes(term));
+}
+
+function filterGamesBySearch(games){
+  const list=Array.isArray(games)?games:[];
+  return list.filter(gameMatchesSearch);
+}
+
+function updateGameSearchUi(){
+  const hasQuery=!!getGameSearchQuery();
+  gameSearchClear?.classList.toggle("visible",hasQuery);
+}
+
+function rerenderForGameSearch(){
+  updateGameSearchUi();
+
+  if(favoritesOnly){
+    loadFavorites();
+    return;
+  }
+
+  if(selectedSport==="whats-on"){
+    renderWhatsOn(currentGames);
+    return;
+  }
+
+  if(isCollegeSport(selectedSport)){
+    renderCollegeGames();
+    return;
+  }
+
+  if(isProSport(selectedSport)){
+    renderProGames();
+    return;
+  }
+
+  const filtered=filterGamesBySearch(currentGames);
+  const label=sportLabels[selectedSport]||"Sports";
+  scheduleTitle.textContent=getGameSearchQuery()
+    ? `${label} • SEARCH (${filtered.length})`
+    : `${label} Games (${filtered.length})`;
+
+  if(!filtered.length){
+    gamesList.innerHTML="";
+    setStatus(`No games match "${gameSearchInput.value.trim()}" for this date.`);
+    return;
+  }
+
+  hideStatus();
+  renderGames(filtered);
+}
+
 function isLocalModeGame(game){
   const text=gameIdentityText(game);
   if(!text)return false;
@@ -1444,7 +1615,8 @@ const gamesList=document.getElementById("gamesList"), statusBox=document.getElem
 profileSelect=document.getElementById("profileSelect"), activeProfileLabel=document.getElementById("activeProfileLabel"),
 loveTeamInput=document.getElementById("loveTeamInput"), hateTeamInput=document.getElementById("hateTeamInput"),
 loveTeamChips=document.getElementById("loveTeamChips"), hateTeamChips=document.getElementById("hateTeamChips"),
-favoriteSportsGrid=document.getElementById("favoriteSportsGrid"), teamSuggestions=document.getElementById("teamSuggestions");
+favoriteSportsGrid=document.getElementById("favoriteSportsGrid"), teamSuggestions=document.getElementById("teamSuggestions"),
+gameSearchInput=document.getElementById("gameSearchInput"), gameSearchClear=document.getElementById("gameSearchClear");
 
 
 function getVisibleSportIds(){
@@ -2368,14 +2540,16 @@ function renderProFilter(){
   ).join("");
 }
 function renderProGames(){
-  const filtered=sortProGames(currentGames.filter(g=>proFilterMatches(g,activeProFilter)));
+  const filtered=sortProGames(filterGamesBySearch(currentGames).filter(g=>proFilterMatches(g,activeProFilter)));
   const label=sportLabels[selectedSport]||"Sports";
   scheduleTitle.textContent=activeProFilter==="all"
     ?`${label} Games (${filtered.length})`
     :`${label} • ${getProFilterSpec(selectedSport).find(x=>x[0]===activeProFilter)?.[1]||activeProFilter.toUpperCase()} (${filtered.length})`;
   if(!filtered.length){
     gamesList.innerHTML="";
-    setStatus("No games match this pro-sports filter.");
+    setStatus(getGameSearchQuery()
+      ? `No games match "${gameSearchInput.value.trim()}" for this date.`
+      : "No games match this pro-sports filter.");
     return;
   }
   hideStatus();renderGames(filtered);
@@ -2448,7 +2622,7 @@ function renderCollegeFilter(){
 }
 
 function renderCollegeGames(){
-  const source=Array.isArray(currentGames)?currentGames:[];
+  const source=filterGamesBySearch(Array.isArray(currentGames)?currentGames:[]);
   const filtered=sortCollegeGames(source.filter(game=>collegeFilterMatches(game,activeCollegeFilter)));
   const label=sportLabels[selectedSport]||"College Sports";
   const filterLabel=getCollegeFilterSpec(selectedSport).find(x=>x[0]===activeCollegeFilter)?.[1]||activeCollegeFilter.toUpperCase();
@@ -2459,7 +2633,9 @@ function renderCollegeGames(){
 
   if(!filtered.length){
     gamesList.innerHTML="";
-    setStatus(`No ${filterLabel} games match this sport and date.`);
+    setStatus(getGameSearchQuery()
+      ? `No ${filterLabel} games match "${gameSearchInput.value.trim()}" for this date.`
+      : `No ${filterLabel} games match this sport and date.`);
     return;
   }
 
@@ -2522,7 +2698,7 @@ function renderWhatsOn(games){
   // 0.1H8b: What's On is TV-only.
   // Streaming-only games remain available in individual sport tabs, but are
   // intentionally excluded from the What's On dashboard.
-  games=activeOrFutureGames(games);
+  games=filterGamesBySearch(activeOrFutureGames(games));
   const televised=sortByPreferences(games.filter(isTelevisedGame));
 
   const section=(title,items,emptyText)=>`
@@ -2532,7 +2708,12 @@ function renderWhatsOn(games){
     </section>`;
 
   gamesList.innerHTML=
-    section("📺 Televised Games",televised,"No televised games found for this date.");
+    section("📺 Televised Games",televised,getGameSearchQuery()
+      ? `No televised games match "${escapeHtml(gameSearchInput.value.trim())}" for this date.`
+      : "No televised games found for this date.");
+  if(getGameSearchQuery()){
+    scheduleTitle.textContent=`What's On • SEARCH (${televised.length})`;
+  }
   updateDateMeta();
 }
 
@@ -2755,7 +2936,26 @@ async function loadGames(){
   setStatus(`${sportMeta?.label||"This sport"} is enabled in 0.1C. Its live schedule and channel feed is the next data connection step.`);
   return
 }setStatus("Loading live games... If the free backend was asleep, this can take up to about a minute.",true);try{const date=toApiDate(selectedDate);const response=await fetch(`${API_BASE}/resolve?sport=${selectedSport}&date=${date}&provider=directv`);if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json();syncServerTime(data.serverTime);currentGames=filterGamesForViewingMode(activeOrFutureGames((Array.isArray(data.games)?data.games:[]).map(game=>({...game,_sportKey:selectedSport}))));const modePrefix=selectedViewingMode==="standard"?"":`${VIEWING_MODES[selectedViewingMode].label} • `;scheduleTitle.textContent=`${modePrefix}${sportLabels[selectedSport]} Games (${currentGames.length})`;if(!currentGames.length){setStatus(selectedViewingMode==="national"?"No nationally televised linear-TV games match this sport and date.":selectedViewingMode==="local"?"No Pittsburgh / Tri-State local-team games match this sport and date.":"No games found for this sport and date.");return}if(isCollegeSport(selectedSport)){renderCollegeFilter();renderProFilter();renderCollegeGames()}else if(isProSport(selectedSport)){renderCollegeFilter();renderProFilter();renderProGames()}else{renderCollegeFilter();renderProFilter();hideStatus();renderGames(currentGames)}}catch(error){console.error(error);setStatus("Could not load live games. The backend may still be waking up; refresh in a moment.")}}
-function loadFavorites(){favoritesOnly=true;updateDateMeta();todayNav.classList.remove("active");favoritesNav.classList.add("active");const allFavs=getFavorites();const favs=filterGamesForViewingMode(allFavs);currentGames=favs;dateLabel.textContent="Favorites";const modePrefix=selectedViewingMode==="standard"?"":`${VIEWING_MODES[selectedViewingMode].label} • `;scheduleTitle.textContent=`${modePrefix}Favorite Games (${favs.length})`;if(!favs.length){gamesList.innerHTML="";setStatus(allFavs.length?`No favorite games match ${VIEWING_MODES[selectedViewingMode].label} mode.`:"No favorite games yet. Tap ☆ on a game to save it.");return}hideStatus();renderGames(favs)}
+function loadFavorites(){favoritesOnly=true;updateDateMeta();todayNav.classList.remove("active");favoritesNav.classList.add("active");const allFavs=getFavorites();const modeFavs=filterGamesForViewingMode(allFavs);currentGames=modeFavs;const favs=filterGamesBySearch(modeFavs);dateLabel.textContent="Favorites";const modePrefix=selectedViewingMode==="standard"?"":`${VIEWING_MODES[selectedViewingMode].label} • `;scheduleTitle.textContent=getGameSearchQuery()?`${modePrefix}Favorite Games • SEARCH (${favs.length})`:`${modePrefix}Favorite Games (${favs.length})`;if(!favs.length){gamesList.innerHTML="";setStatus(getGameSearchQuery()?`No favorite games match "${gameSearchInput.value.trim()}".`:allFavs.length?`No favorite games match ${VIEWING_MODES[selectedViewingMode].label} mode.`:"No favorite games yet. Tap ☆ on a game to save it.");return}hideStatus();renderGames(favs)}
+
+let gameSearchTimer=null;
+gameSearchInput?.addEventListener("input",()=>{
+  updateGameSearchUi();
+  clearTimeout(gameSearchTimer);
+  gameSearchTimer=setTimeout(rerenderForGameSearch,120);
+});
+gameSearchInput?.addEventListener("search",()=>{
+  updateGameSearchUi();
+  rerenderForGameSearch();
+});
+gameSearchClear?.addEventListener("click",()=>{
+  if(!gameSearchInput)return;
+  gameSearchInput.value="";
+  updateGameSearchUi();
+  gameSearchInput.focus();
+  rerenderForGameSearch();
+});
+
 sportTabs.addEventListener("click",event=>{const button=event.target.closest("button[data-sport]");if(!button)return;selectedSport=button.dataset.sport;if(selectedSport!=="whats-on")whatsOnLoadGeneration++;activeCollegeFilter="all";activeProFilter="all";renderSportTabs();renderCollegeFilter();renderProFilter();loadGames()});
 document.getElementById("collegeFilterStrip").addEventListener("click",event=>{
   const button=event.target.closest("button[data-college-filter]");
