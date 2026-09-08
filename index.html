@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Where's the Game?</title>
-  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUALS APPROVED through 0.1F4; 0.1G viewing-source architecture; 0.1G1 mobile card layout; 0.1H provider selection; 0.1H1 Pittsburgh provider mappings; 0.1H2 sports network audit; 0.1H3 stable provider typography; 0.1H4 daily favorites cleanup; 0.1H5 college sports priority; 0.1H6 pro sports priority + NCAA division sorting; 0.1H6a stable Today sorting; 0.1H6b locked What's On order; 0.1H7 branded gold loading meter; 0.1H8 Standard/National/Local viewing modes; 0.1H8a What's On pro-first hierarchy; 0.1H8b What's On TV-only; 0.1H8c NCAA conference team-membership filters -->
+  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUALS APPROVED through 0.1F4; 0.1G viewing-source architecture; 0.1G1 mobile card layout; 0.1H provider selection; 0.1H1 Pittsburgh provider mappings; 0.1H2 sports network audit; 0.1H3 stable provider typography; 0.1H4 daily favorites cleanup; 0.1H5 college sports priority; 0.1H6 pro sports priority + NCAA division sorting; 0.1H6a stable Today sorting; 0.1H6b locked What's On order; 0.1H7 branded gold loading meter; 0.1H8 Standard/National/Local viewing modes; 0.1H8a What's On pro-first hierarchy; 0.1H8b What's On TV-only; 0.1H8c NCAA conference team-membership filters; 0.1H8d NCAA filter engine repair -->
   <style>
     :root{--bg:#f5f8fc;--card:#fff;--ink:#0b1b3a;--muted:#60708d;--blue:#1769e8;--blue2:#e8f2ff;--line:#dce5f0;--shadow:0 8px 24px rgba(23,55,99,.08);--warn:#fff3cd;--warn-ink:#765800;--ok:#eaf8ef;--ok-ink:#166534}
     *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
@@ -1715,17 +1715,36 @@ function numericRank(value){
 }
 
 function teamRank(game,side){
-  const cap=side==="away"?"Away":"Home";
   const low=side;
   const candidates=[
     game?.[`${low}Rank`],game?.[`${low}Ranking`],game?.[`${low}APRank`],
     game?.[`${low}TeamRank`],game?.rankings?.[low],game?.ranks?.[low],
-    game?.teams?.[low]?.rank,game?.competitors?.[low]?.rank
+    game?.teams?.[low]?.rank,game?.teams?.[low]?.ranking,
+    game?.competitors?.[low]?.rank,game?.competitors?.[low]?.ranking,
+    game?.[`${low}Team`]?.rank,game?.[`${low}Team`]?.ranking
   ];
   for(const value of candidates){
     const n=numericRank(value);
     if(n)return n;
   }
+
+  const sideName=String(game?.[low]||game?.[`${low}Team`]?.name||game?.[`${low}Team`]?.displayName||"").toLowerCase();
+  const collections=[game?.competitors,game?.teams].filter(Boolean);
+  for(const collection of collections){
+    const values=Array.isArray(collection)?collection:Object.values(collection);
+    for(const item of values){
+      if(!item||typeof item!=="object")continue;
+      const name=String(item.name||item.displayName||item.shortDisplayName||item.team?.name||item.team?.displayName||"").toLowerCase();
+      const homeAway=String(item.homeAway||item.side||"").toLowerCase();
+      if((homeAway===low)||(sideName&&name&&sideName.includes(name))||(sideName&&name&&name.includes(sideName))){
+        for(const value of [item.rank,item.ranking,item.apRank,item.pollRank,item.team?.rank,item.team?.ranking]){
+          const n=numericRank(value);
+          if(n)return n;
+        }
+      }
+    }
+  }
+
   const name=String(game?.[low]||"");
   const m=name.match(/^\s*#\s*(\d{1,2})\b/);
   return m?Number(m[1]):null;
@@ -1739,8 +1758,11 @@ function isTop25Game(game){
 function collegeText(game){
   const parts=[
     game?.conference,game?.conferenceName,game?.division,game?.level,game?._division,
+    game?.subdivision,game?.classification,game?.group,game?.groupName,game?.groupId,
     game?.awayConference,game?.homeConference,game?.awayDivision,game?.homeDivision,
-    game?.away?.conference,game?.home?.conference,game?.league,game?.series
+    game?.away?.conference,game?.home?.conference,game?.awayTeam?.conference,game?.homeTeam?.conference,
+    game?.awayTeam?.division,game?.homeTeam?.division,game?.competitors,game?.teams,
+    game?.league,game?.series
   ];
   return parts.filter(Boolean).map(v=>typeof v==="object"?JSON.stringify(v):String(v)).join(" ").toUpperCase();
 }
@@ -1838,6 +1860,30 @@ function isConferenceCollegeTV(game){
 }
 
 
+const NCAAF_FBS_FALLBACK_TEAMS=[
+  "air force","akron","alabama","appalachian state","arizona","arizona state","arkansas",
+  "arkansas state","army","auburn","ball state","baylor","boise state","boston college",
+  "bowling green","buffalo","byu","california","cal golden bears","central michigan",
+  "charlotte","cincinnati","clemson","coastal carolina","colorado","colorado state",
+  "duke","east carolina","eastern michigan","fiu","florida atlantic","florida gators",
+  "florida state","fresno state","georgia bulldogs","georgia southern","georgia state",
+  "georgia tech","hawaii","houston","illinois","indiana","iowa","iowa state","jacksonville state",
+  "james madison","kansas","kansas state","kennesaw state","kent state","kentucky","liberty",
+  "louisiana ragin","louisiana tech","louisville","lsu","marshall","maryland","memphis",
+  "miami hurricanes","miami (oh)","michigan","michigan state","middle tennessee","minnesota",
+  "mississippi state","missouri","navy","nc state","nebraska","nevada","new mexico",
+  "new mexico state","north carolina","north texas","northern illinois","northwestern",
+  "notre dame","ohio bobcats","ohio state","oklahoma","oklahoma state","old dominion",
+  "ole miss","oregon","oregon state","penn state","pitt","pittsburgh panthers","purdue",
+  "rice","rutgers","sam houston","san diego state","san jose state","smu","south alabama",
+  "south carolina","south florida","southern miss","stanford","syracuse","tcu","temple",
+  "tennessee","texas longhorns","texas a&m","texas state","texas tech","toledo","troy",
+  "tulane","tulsa","uab","ucf","ucla","uconn","ul monroe","umass","unlv","usc trojans",
+  "utah","utah state","utep","utsa","vanderbilt","virginia cavaliers","virginia tech",
+  "wake forest","washington huskies","washington state","west virginia","western kentucky",
+  "western michigan","wisconsin","wyoming"
+];
+
 function collegeDivisionKey(game){
   const t=collegeText(game);
   if(/\bFBS\b|FOOTBALL BOWL SUBDIVISION/.test(t))return "fbs";
@@ -1845,6 +1891,14 @@ function collegeDivisionKey(game){
   if(/\bDIVISION\s*II\b|\bDIVISION 2\b|\bDII\b|\bD2\b/.test(t))return "d2";
   if(/\bDIVISION\s*III\b|\bDIVISION 3\b|\bDIII\b|\bD3\b/.test(t))return "d3";
   if(/\bNAIA\b/.test(t))return "naia";
+
+  // ESPN/normalized NCAAF feeds sometimes omit the subdivision field.
+  // In that case, recognized FBS team identity is a safe fallback.
+  if(game?._sportKey==="ncaaf"){
+    const identity=collegeTeamIdentityText(game);
+    if(NCAAF_FBS_FALLBACK_TEAMS.some(team=>identity.includes(team)))return "fbs";
+  }
+
   if(/\bDIVISION\s*I\b|\bDIVISION 1\b|\bDI\b|\bD1\b/.test(t))return "d1";
   return "unknown";
 }
@@ -2076,13 +2130,19 @@ function sortCollegeGames(games){
 }
 
 function collegeFilterMatches(game,filter){
-  if(filter==="all")return true;
-  if(filter==="top25")return isTop25Game(game);
-  if(filter==="fbs")return collegeDivisionKey(game)==="fbs";
-  if(filter==="fcs")return collegeDivisionKey(game)==="fcs";
-  if(filter==="d2")return collegeDivisionKey(game)==="d2";
-  if(filter==="d3")return collegeDivisionKey(game)==="d3";
-  return conferenceMatch(game,filter);
+  const key=String(filter||"all").toLowerCase();
+  if(key==="all")return true;
+  if(key==="top25")return isTop25Game(game);
+
+  const division=collegeDivisionKey(game);
+  if(key==="fbs")return division==="fbs";
+  if(key==="fcs")return division==="fcs";
+  if(key==="d2")return division==="d2";
+  if(key==="d3")return division==="d3";
+  if(key==="d1")return ["d1","fbs","fcs"].includes(division);
+  if(key==="naia")return division==="naia";
+
+  return conferenceMatch(game,key);
 }
 
 function getCollegeFilterSpec(sportId){
@@ -2108,16 +2168,21 @@ function renderCollegeFilter(){
 }
 
 function renderCollegeGames(){
-  const filtered=sortCollegeGames(currentGames.filter(g=>collegeFilterMatches(g,activeCollegeFilter)));
+  const source=Array.isArray(currentGames)?currentGames:[];
+  const filtered=sortCollegeGames(source.filter(game=>collegeFilterMatches(game,activeCollegeFilter)));
   const label=sportLabels[selectedSport]||"College Sports";
+  const filterLabel=getCollegeFilterSpec(selectedSport).find(x=>x[0]===activeCollegeFilter)?.[1]||activeCollegeFilter.toUpperCase();
+
   scheduleTitle.textContent=activeCollegeFilter==="all"
     ?`${label} Games (${filtered.length})`
-    :`${label} • ${getCollegeFilterSpec(selectedSport).find(x=>x[0]===activeCollegeFilter)?.[1]||activeCollegeFilter.toUpperCase()} (${filtered.length})`;
+    :`${label} • ${filterLabel} (${filtered.length})`;
+
   if(!filtered.length){
     gamesList.innerHTML="";
-    setStatus("No games match this college filter.");
+    setStatus(`No ${filterLabel} games match this sport and date.`);
     return;
   }
+
   hideStatus();
   renderGames(filtered);
 }
