@@ -136,6 +136,16 @@ function normalizeEvent(event, sportLabel, metadata = {}) {
       homeTeam?.team?.displayName ??
       "Home",
 
+    awayTeamId:
+      awayTeam?.team?.id != null
+        ? String(awayTeam.team.id)
+        : null,
+
+    homeTeamId:
+      homeTeam?.team?.id != null
+        ? String(homeTeam.team.id)
+        : null,
+
     startTime:
       event?.date ?? null,
 
@@ -197,6 +207,151 @@ async function fetchScoreboard(config, date, groupId = null) {
   }
 
   return response.json();
+}
+
+
+async function fetchCollegeFootballRankings() {
+  const url =
+    "https://site.api.espn.com/apis/site/v2/sports/" +
+    "football/college-football/rankings";
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(
+      `ESPN rankings request failed: ${response.status}`
+    );
+  }
+
+  return response.json();
+}
+
+function normalizeRankTeamName(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function getApTop25Map(data) {
+  const rankings = Array.isArray(data?.rankings)
+    ? data.rankings
+    : [];
+
+  const apPoll =
+    rankings.find((poll) =>
+      /(^|\b)ap(\b|$).*top\s*25|associated press/i.test(
+        String(
+          poll?.name ||
+          poll?.shortName ||
+          poll?.headline ||
+          ""
+        )
+      )
+    ) ||
+    rankings.find((poll) =>
+      /top\s*25/i.test(
+        String(
+          poll?.name ||
+          poll?.shortName ||
+          poll?.headline ||
+          ""
+        )
+      )
+    ) ||
+    rankings[0];
+
+  const byId = new Map();
+  const byName = new Map();
+
+  for (const item of apPoll?.ranks ?? []) {
+    const rank = Number(
+      item?.current ??
+      item?.rank ??
+      item?.currentRank
+    );
+
+    if (!Number.isFinite(rank) || rank < 1 || rank > 25) {
+      continue;
+    }
+
+    const team = item?.team ?? {};
+    const id = team?.id != null
+      ? String(team.id)
+      : null;
+
+    if (id) {
+      byId.set(id, rank);
+    }
+
+    for (const name of [
+      team?.displayName,
+      team?.shortDisplayName,
+      team?.name,
+      team?.location,
+      item?.teamName
+    ]) {
+      const normalized = normalizeRankTeamName(name);
+      if (normalized) {
+        byName.set(normalized, rank);
+      }
+    }
+  }
+
+  return {
+    byId,
+    byName,
+    pollName:
+      apPoll?.name ||
+      apPoll?.shortName ||
+      "AP Top 25"
+  };
+}
+
+function rankForGameTeam(game, side, rankMap) {
+  const id = game?.[`${side}TeamId`];
+
+  if (id != null && rankMap.byId.has(String(id))) {
+    return rankMap.byId.get(String(id));
+  }
+
+  const exact = normalizeRankTeamName(game?.[side]);
+  if (exact && rankMap.byName.has(exact)) {
+    return rankMap.byName.get(exact);
+  }
+
+  // ESPN naming can vary slightly between scoreboard and rankings.
+  // Only use a contained-name fallback for reasonably specific names.
+  if (exact.length >= 5) {
+    for (const [name, rank] of rankMap.byName.entries()) {
+      if (
+        name.length >= 5 &&
+        (exact === name ||
+         exact.includes(name) ||
+         name.includes(exact))
+      ) {
+        return rank;
+      }
+    }
+  }
+
+  return null;
+}
+
+function applyCollegeFootballRankings(games, rankMap) {
+  return games.map((game) => ({
+    ...game,
+    awayRank:
+      rankForGameTeam(game, "away", rankMap) ??
+      game?.awayRank ??
+      null,
+    homeRank:
+      rankForGameTeam(game, "home", rankMap) ??
+      game?.homeRank ??
+      null,
+    rankingPoll: rankMap.pollName
+  }));
 }
 
 function dedupeGames(games) {
@@ -268,9 +423,34 @@ async function getBaseGames(sportKey, config, date) {
     })
   );
 
-  return dedupeGames(
+  const games = dedupeGames(
     results.flat()
   );
+
+  // The scoreboard feed does not reliably include poll rank on each
+  // competitor. Pull ESPN's rankings feed separately and join the
+  // current AP Top 25 to each scheduled game by stable team ID/name.
+  try {
+    const rankingData =
+      await fetchCollegeFootballRankings();
+
+    const rankMap =
+      getApTop25Map(rankingData);
+
+    return applyCollegeFootballRankings(
+      games,
+      rankMap
+    );
+  } catch (error) {
+    console.error(
+      "College football rankings lookup error:",
+      error
+    );
+
+    // Do not break the schedule if the rankings endpoint is temporarily
+    // unavailable. Existing scoreboard rank metadata remains as fallback.
+    return games;
+  }
 }
 
 async function addDirectvGuideData(game, sportKey) {
@@ -363,6 +543,10 @@ router.get("/", async (req, res) => {
       divisions:
         sportKey === "ncaaf"
           ? ["FBS", "FCS", "DII", "DIII"]
+          : undefined,
+      rankingSource:
+        sportKey === "ncaaf"
+          ? (games.find((g) => g?.rankingPoll)?.rankingPoll || null)
           : undefined,
       games
     });
