@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Where's the Game?</title>
-  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUALS APPROVED through 0.1F4; 0.1G viewing-source architecture; 0.1G1 mobile card layout; 0.1H provider selection; 0.1H1 Pittsburgh provider mappings; 0.1H2 sports network audit; 0.1H3 stable provider typography -->
+  <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUALS APPROVED through 0.1F4; 0.1G viewing-source architecture; 0.1G1 mobile card layout; 0.1H provider selection; 0.1H1 Pittsburgh provider mappings; 0.1H2 sports network audit; 0.1H3 stable provider typography; 0.1H4 daily favorites cleanup; 0.1H5 college sports priority -->
   <style>
     :root{--bg:#f5f8fc;--card:#fff;--ink:#0b1b3a;--muted:#60708d;--blue:#1769e8;--blue2:#e8f2ff;--line:#dce5f0;--shadow:0 8px 24px rgba(23,55,99,.08);--warn:#fff3cd;--warn-ink:#765800;--ok:#eaf8ef;--ok-ink:#166534}
     *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
@@ -765,6 +765,52 @@
 @media(max-width:430px){.directv-box{grid-template-columns:108px minmax(0,1fr) minmax(88px,34%)!important;gap:6px!important;padding:6px 10px!important}.directv-label{font-size:10px!important}.directv-channel{font-size:18px!important}.directv-note{font-size:9px!important}.directv-channel[data-long-source="true"]{font-size:12px!important}}
 @media(max-width:390px){.directv-box{grid-template-columns:96px minmax(0,1fr) 82px!important;gap:5px!important;padding:6px 8px!important}.directv-label{font-size:9px!important}.directv-channel{font-size:17px!important}.directv-note{font-size:8.5px!important}.directv-channel[data-long-source="true"]{font-size:11px!important}}
 
+
+/* === WTG 0.1H5 COLLEGE SPORTS PRIORITY === */
+.college-filter-strip{
+  display:flex;
+  gap:7px;
+  overflow-x:auto;
+  padding:7px 10px 8px;
+  background:rgba(3,18,31,.88);
+  border-bottom:1px solid rgba(49,145,205,.18);
+  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+}
+.college-filter-strip[hidden]{display:none!important}
+.college-filter-strip::-webkit-scrollbar{display:none}
+.college-filter-strip button{
+  flex:0 0 auto;
+  min-height:32px;
+  padding:6px 11px;
+  border-radius:999px;
+  border:1px solid rgba(74,166,222,.34);
+  background:rgba(7,35,56,.92);
+  color:#a9c5d8;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.025em;
+  white-space:nowrap;
+}
+.college-filter-strip button.active{
+  color:#fff;
+  border-color:#63d6ff;
+  background:linear-gradient(180deg,#159fff,#0877ed);
+  box-shadow:0 0 13px rgba(0,151,255,.28);
+}
+.team-rank{
+  display:inline-block;
+  margin-right:3px;
+  color:#67d8ff;
+  font-weight:1000;
+  font-size:.96em;
+  letter-spacing:.01em;
+}
+@media(max-width:430px){
+  .college-filter-strip{padding:6px 8px 7px;gap:6px}
+  .college-filter-strip button{min-height:30px;padding:5px 10px;font-size:10px}
+}
+
 </style>
 </head>
 <body>
@@ -782,6 +828,7 @@
   </header>
 
   <div class="sport-tabs" id="sportTabs" aria-label="Sports"></div>
+  <div class="college-filter-strip" id="collegeFilterStrip" aria-label="College sports filters" hidden></div>
 
   <div class="date-row">
     <button class="navbtn" id="prevDay">‹</button><div class="date-label" id="dateLabel"></div><button class="navbtn" id="nextDay">›</button><button class="todaybtn" id="todayBtn">Today</button>
@@ -1150,10 +1197,11 @@ function isFinalGame(game){const s=statusText(game);return s.includes("final")||
 function isLiveGame(game){const s=statusText(game);return s.includes("in progress")||s.includes("inprogress")||s.includes("live")||s.includes("halftime")||s.includes("intermission")||s.includes("end of")||s.includes("quarter")||s.includes("period")||s.includes("inning")||game?.status?.type?.state==="in"}
 function remainingGameCount(){const serverNow=getCurrentServerTime();const now=serverNow?serverNow.getTime():Date.now();return currentGames.filter(game=>{if(isFinalGame(game))return false;if(isLiveGame(game))return true;const start=Date.parse(game?.startTime||"");return Number.isFinite(start)?start>now:true}).length}
 function updateDateMeta(){currentTimeEl.textContent=formatCurrentEasternTime();remainingGamesEl.textContent=`Remaining games: ${remainingGameCount()}`}
-function getFavorites(){try{const x=JSON.parse(localStorage.getItem("wtg-live-favorites")||"[]");return Array.isArray(x)?x:[]}catch{return[]}}
+function easternDateKey(date=new Date()){return new Intl.DateTimeFormat("en-CA",{timeZone:EASTERN_TZ,year:"numeric",month:"2-digit",day:"2-digit"}).format(date)}
+function getFavorites(){try{const raw=JSON.parse(localStorage.getItem("wtg-live-favorites")||"[]");if(!Array.isArray(raw))return[];const today=easternDateKey();const kept=raw.filter(item=>{const savedDay=item?._wtgFavoriteDay;if(savedDay)return savedDay===today;if(item?.startTime)return easternDateKey(new Date(item.startTime))===today;return false});if(kept.length!==raw.length)saveFavorites(kept);return kept}catch{return[]}}
 function saveFavorites(items){localStorage.setItem("wtg-live-favorites",JSON.stringify(items))}
 function isFavorite(id){return getFavorites().some(item=>String(item.id)===String(id))}
-function toggleFavorite(game){const favs=getFavorites(),exists=favs.some(item=>String(item.id)===String(game.id));saveFavorites(exists?favs.filter(item=>String(item.id)!==String(game.id)):[...favs,game]);favoritesOnly?loadFavorites():renderGames(currentGames)}
+function toggleFavorite(game){const favs=getFavorites(),exists=favs.some(item=>String(item.id)===String(game.id));saveFavorites(exists?favs.filter(item=>String(item.id)!==String(game.id)):[...favs,{...game,_wtgFavoriteDay:easternDateKey()}]);favoritesOnly?loadFavorites():renderGames(currentGames)}
 function directvNationalConflictKeys(games){
   const counts=new Map();
   for(const game of games){
@@ -1405,9 +1453,202 @@ function isTelevisedGame(game){
   return hasTv||hasEspnTv;
 }
 
+
+const COLLEGE_SPORT_IDS=new Set([
+  "ncaaf","collegehockey","ncaab","ncaaw","collegesoccer","cbaseball",
+  "softball","lacrosse","collegevolleyball","fieldhockey","waterpolo","wrestling"
+]);
+
+const COLLEGE_FILTERS={
+  ncaaf:[
+    ["all","ALL"],["top25","TOP 25"],["fbs","FBS"],["acc","ACC"],["sec","SEC"],
+    ["bigten","BIG TEN"],["big12","BIG 12"],["fcs","FCS"]
+  ],
+  ncaab:[
+    ["all","ALL"],["top25","TOP 25"],["acc","ACC"],["sec","SEC"],
+    ["bigten","BIG TEN"],["big12","BIG 12"],["bigeast","BIG EAST"]
+  ],
+  ncaaw:[
+    ["all","ALL"],["top25","TOP 25"],["acc","ACC"],["sec","SEC"],
+    ["bigten","BIG TEN"],["big12","BIG 12"],["bigeast","BIG EAST"]
+  ],
+  collegehockey:[
+    ["all","ALL"],["top25","TOP 25"],["bigten","BIG TEN"],["nchc","NCHC"],
+    ["hockeyeast","HOCKEY EAST"],["ecac","ECAC"]
+  ],
+  default:[
+    ["all","ALL"],["top25","TOP 25"],["acc","ACC"],["sec","SEC"],
+    ["bigten","BIG TEN"],["big12","BIG 12"]
+  ]
+};
+
+let activeCollegeFilter="all";
+
+function isCollegeSport(gameOrSport){
+  const id=typeof gameOrSport==="string"?gameOrSport:(gameOrSport?._sportKey||selectedSport);
+  return COLLEGE_SPORT_IDS.has(id);
+}
+
+function numericRank(value){
+  if(value==null)return null;
+  if(typeof value==="number"&&Number.isFinite(value)&&value>0&&value<=99)return Math.trunc(value);
+  if(typeof value==="object"){
+    for(const key of ["rank","current","ranking","apRank","pollRank","value"]){
+      const n=numericRank(value[key]);
+      if(n)return n;
+    }
+    return null;
+  }
+  const m=String(value).match(/#?\s*(\d{1,2})/);
+  if(!m)return null;
+  const n=Number(m[1]);
+  return n>0&&n<=99?n:null;
+}
+
+function teamRank(game,side){
+  const cap=side==="away"?"Away":"Home";
+  const low=side;
+  const candidates=[
+    game?.[`${low}Rank`],game?.[`${low}Ranking`],game?.[`${low}APRank`],
+    game?.[`${low}TeamRank`],game?.rankings?.[low],game?.ranks?.[low],
+    game?.teams?.[low]?.rank,game?.competitors?.[low]?.rank
+  ];
+  for(const value of candidates){
+    const n=numericRank(value);
+    if(n)return n;
+  }
+  const name=String(game?.[low]||"");
+  const m=name.match(/^\s*#\s*(\d{1,2})\b/);
+  return m?Number(m[1]):null;
+}
+
+function isTop25Game(game){
+  const a=teamRank(game,"away"),h=teamRank(game,"home");
+  return Boolean((a&&a<=25)||(h&&h<=25));
+}
+
+function collegeText(game){
+  const parts=[
+    game?.conference,game?.conferenceName,game?.division,game?.level,game?._division,
+    game?.awayConference,game?.homeConference,game?.awayDivision,game?.homeDivision,
+    game?.away?.conference,game?.home?.conference,game?.league,game?.series
+  ];
+  return parts.filter(Boolean).map(v=>typeof v==="object"?JSON.stringify(v):String(v)).join(" ").toUpperCase();
+}
+
+function isFBSGame(game){
+  const t=collegeText(game);
+  return /\bFBS\b|FOOTBALL BOWL SUBDIVISION/.test(t);
+}
+function isFCSGame(game){
+  const t=collegeText(game);
+  return /\bFCS\b|FOOTBALL CHAMPIONSHIP SUBDIVISION/.test(t);
+}
+function conferenceMatch(game,key){
+  const t=collegeText(game);
+  const tests={
+    acc:/\bACC\b|ATLANTIC COAST/,
+    sec:/\bSEC\b|SOUTHEASTERN/,
+    bigten:/\bBIG TEN\b|\bB1G\b/,
+    big12:/\bBIG 12\b|\bBIG XII\b/,
+    bigeast:/\bBIG EAST\b/,
+    nchc:/\bNCHC\b|NATIONAL COLLEGIATE HOCKEY CONFERENCE/,
+    hockeyeast:/HOCKEY EAST/,
+    ecac:/\bECAC\b/
+  };
+  return tests[key]?.test(t)||false;
+}
+
+function isMajorCollegeTV(game){
+  const n=String(game?.broadcast||game?.network||"").toUpperCase();
+  return [
+    "ABC","CBS","FOX","NBC","ESPN","ESPN2","FS1","TNT","TBS","TRUTV"
+  ].some(x=>n.includes(x));
+}
+function isConferenceCollegeTV(game){
+  const n=String(game?.broadcast||game?.network||"").toUpperCase();
+  return [
+    "ACC NETWORK","ACCN","SEC NETWORK","SECN","BIG TEN NETWORK","BTN",
+    "ESPNU","CBS SPORTS NETWORK","CBSSN"
+  ].some(x=>n.includes(x));
+}
+
+function collegePriorityScore(game){
+  if(!isCollegeSport(game))return 0;
+  let score=0;
+  const ar=teamRank(game,"away"),hr=teamRank(game,"home");
+  if(ar&&hr&&ar<=25&&hr<=25)score+=4700;
+  else if(isTop25Game(game))score+=4200;
+  if(isMajorCollegeTV(game))score+=3000;
+  else if(isConferenceCollegeTV(game))score+=2200;
+  else if(isTelevisedGame(game))score+=1700;
+  else if(isStreamingOnlyGame(game))score+=900;
+  if(isFBSGame(game))score+=350;
+  if(isFCSGame(game))score-=100;
+  return score;
+}
+
+function sortCollegeGames(games){
+  return [...games].sort((a,b)=>{
+    const fav=isFavorite(b.id)-isFavorite(a.id);
+    if(fav)return fav;
+    const p=collegePriorityScore(b)-collegePriorityScore(a);
+    if(p)return p;
+    const live=isLiveGame(b)-isLiveGame(a);
+    if(live)return live;
+    return (Date.parse(a?.startTime||"")||0)-(Date.parse(b?.startTime||"")||0);
+  });
+}
+
+function collegeFilterMatches(game,filter){
+  if(filter==="all")return true;
+  if(filter==="top25")return isTop25Game(game);
+  if(filter==="fbs")return isFBSGame(game);
+  if(filter==="fcs")return isFCSGame(game);
+  return conferenceMatch(game,filter);
+}
+
+function getCollegeFilterSpec(sportId){
+  return COLLEGE_FILTERS[sportId]||COLLEGE_FILTERS.default;
+}
+
+function renderCollegeFilter(){
+  const strip=document.getElementById("collegeFilterStrip");
+  const meta=SPORT_CATALOG.find(s=>s.id===selectedSport);
+  if(!strip)return;
+  if(!isCollegeSport(selectedSport)||!meta?.live){
+    strip.hidden=true;
+    strip.innerHTML="";
+    activeCollegeFilter="all";
+    return;
+  }
+  const spec=getCollegeFilterSpec(selectedSport);
+  if(!spec.some(([id])=>id===activeCollegeFilter))activeCollegeFilter="all";
+  strip.hidden=false;
+  strip.innerHTML=spec.map(([id,label])=>
+    `<button type="button" data-college-filter="${id}" class="${activeCollegeFilter===id?"active":""}">${label}</button>`
+  ).join("");
+}
+
+function renderCollegeGames(){
+  const filtered=sortCollegeGames(currentGames.filter(g=>collegeFilterMatches(g,activeCollegeFilter)));
+  const label=sportLabels[selectedSport]||"College Sports";
+  scheduleTitle.textContent=activeCollegeFilter==="all"
+    ?`${label} Games (${filtered.length})`
+    :`${label} • ${getCollegeFilterSpec(selectedSport).find(x=>x[0]===activeCollegeFilter)?.[1]||activeCollegeFilter.toUpperCase()} (${filtered.length})`;
+  if(!filtered.length){
+    gamesList.innerHTML="";
+    setStatus("No games match this college filter.");
+    return;
+  }
+  hideStatus();
+  renderGames(filtered);
+}
+
 function preferenceScore(game){
   let score=0;
   if(isFavorite(game.id))score+=10000;
+  score+=collegePriorityScore(game);
   const visible=getVisibleSportIds();
   const index=visible.indexOf(game?._sportKey);
   if(index>=0)score+=Math.max(0,500-index);
@@ -1590,12 +1831,12 @@ function renderGame(game,conflictKeys){
     main=`<div class="matchup">
       <div class="team team-away">
         <div class="team-mark">${teamMark(game.away)}</div>
-        <div class="team-copy"><span>${away.small}</span><strong>${away.big}</strong></div>
+        <div class="team-copy"><span>${teamRank(game,"away")?`<b class="team-rank">#${teamRank(game,"away")}</b>`:""}${away.small}</span><strong>${away.big}</strong></div>
       </div>
       <div class="at-mark">@</div>
       <div class="team team-home">
         <div class="team-mark">${teamMark(game.home)}</div>
-        <div class="team-copy"><span>${home.small}</span><strong>${home.big}</strong></div>
+        <div class="team-copy"><span>${teamRank(game,"home")?`<b class="team-rank">#${teamRank(game,"home")}</b>`:""}${home.small}</span><strong>${home.big}</strong></div>
       </div>
     </div>`;
   }else{
@@ -1637,9 +1878,16 @@ async function loadGames(){
   }
   setStatus(`${sportMeta?.label||"This sport"} is enabled in 0.1C. Its live schedule and channel feed is the next data connection step.`);
   return
-}setStatus("Loading live games... If the free backend was asleep, this can take up to about a minute.",true);try{const date=toApiDate(selectedDate);const response=await fetch(`${API_BASE}/resolve?sport=${selectedSport}&date=${date}&provider=directv`);if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json();syncServerTime(data.serverTime);currentGames=activeOrFutureGames(Array.isArray(data.games)?data.games:[]);scheduleTitle.textContent=`${sportLabels[selectedSport]} Games (${currentGames.length})`;if(!currentGames.length){setStatus("No games found for this sport and date.");return}hideStatus();renderGames(currentGames)}catch(error){console.error(error);setStatus("Could not load live games. The backend may still be waking up; refresh in a moment.")}}
+}setStatus("Loading live games... If the free backend was asleep, this can take up to about a minute.",true);try{const date=toApiDate(selectedDate);const response=await fetch(`${API_BASE}/resolve?sport=${selectedSport}&date=${date}&provider=directv`);if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json();syncServerTime(data.serverTime);currentGames=activeOrFutureGames((Array.isArray(data.games)?data.games:[]).map(game=>({...game,_sportKey:selectedSport})));scheduleTitle.textContent=`${sportLabels[selectedSport]} Games (${currentGames.length})`;if(!currentGames.length){setStatus("No games found for this sport and date.");return}if(isCollegeSport(selectedSport)){renderCollegeFilter();renderCollegeGames()}else{hideStatus();renderGames(currentGames)}}catch(error){console.error(error);setStatus("Could not load live games. The backend may still be waking up; refresh in a moment.")}}
 function loadFavorites(){favoritesOnly=true;updateDateMeta();todayNav.classList.remove("active");favoritesNav.classList.add("active");const favs=getFavorites();currentGames=favs;dateLabel.textContent="Favorites";scheduleTitle.textContent=`Favorite Games (${favs.length})`;if(!favs.length){gamesList.innerHTML="";setStatus("No favorite games yet. Tap ☆ on a game to save it.");return}hideStatus();renderGames(favs)}
-sportTabs.addEventListener("click",event=>{const button=event.target.closest("button[data-sport]");if(!button)return;selectedSport=button.dataset.sport;renderSportTabs();loadGames()});
+sportTabs.addEventListener("click",event=>{const button=event.target.closest("button[data-sport]");if(!button)return;selectedSport=button.dataset.sport;activeCollegeFilter="all";renderSportTabs();renderCollegeFilter();loadGames()});
+document.getElementById("collegeFilterStrip").addEventListener("click",event=>{
+  const button=event.target.closest("button[data-college-filter]");
+  if(!button)return;
+  activeCollegeFilter=button.dataset.collegeFilter||"all";
+  renderCollegeFilter();
+  renderCollegeGames();
+});
 document.querySelector(".gear").addEventListener("click",openSettings);
 document.getElementById("settingsClose").addEventListener("click",closeSettings);
 settingsBackdrop.addEventListener("click",event=>{if(event.target===settingsBackdrop)closeSettings()});
@@ -1655,10 +1903,11 @@ document.getElementById("coreSportsOnly").addEventListener("click",()=>{saveVisi
 document.getElementById("prevDay").addEventListener("click",()=>{selectedDate.setDate(selectedDate.getDate()-1);selectedDate=new Date(selectedDate);loadGames()});
 document.getElementById("nextDay").addEventListener("click",()=>{selectedDate.setDate(selectedDate.getDate()+1);selectedDate=new Date(selectedDate);loadGames()});
 document.getElementById("todayBtn").addEventListener("click",()=>{selectedDate=new Date();loadGames()});
-todayNav.addEventListener("click",()=>{selectedDate=new Date();selectedSport="whats-on";renderSportTabs();loadGames()});
-favoritesNav.addEventListener("click",loadFavorites);
+todayNav.addEventListener("click",()=>{selectedDate=new Date();selectedSport="whats-on";activeCollegeFilter="all";renderSportTabs();renderCollegeFilter();loadGames()});
+favoritesNav.addEventListener("click",()=>{document.getElementById("collegeFilterStrip").hidden=true;loadFavorites()});
 gamesList.addEventListener("click",event=>{const button=event.target.closest(".favorite");if(!button)return;const game=currentGames.find(item=>String(item.id)===String(button.dataset.id));if(game)toggleFavorite(game)});
 renderSportTabs();
+renderCollegeFilter();
 renderSportsSettings();
 updateDateMeta();
 setInterval(updateDateMeta,60000);
