@@ -895,7 +895,7 @@
 .game-card{cursor:pointer}
 .game-card .favorite,.game-card a,.game-card button{cursor:pointer}
 
-/* 0.1H8h — Team / City Game Search + Top 25 + Profiles */
+/* 0.1H8i — Weekly AP Top 25 Team-ID Join + Search + Profiles */
 .profile-settings-block h3,.favorite-sports-profile-block h3{margin:8px 0;color:#f5fbff;font-size:16px;letter-spacing:.02em}
 .profile-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin-bottom:10px}
 .profile-toolbar select,.profile-team-add input{
@@ -1609,7 +1609,7 @@ function filterGamesForViewingMode(games){
   return (Array.isArray(games)?games:[]).filter(viewingModeMatches);
 }
 
-let selectedSport="whats-on", selectedDate=new Date(), favoritesOnly=false, currentGames=[];
+let selectedSport="whats-on", selectedDate=new Date(), favoritesOnly=false, currentGames=[], currentNcaafRankingMeta=null;
 let serverTimeBaseMs=null, serverTimePerfBase=null;
 const gamesList=document.getElementById("gamesList"), statusBox=document.getElementById("status"), scheduleTitle=document.getElementById("scheduleTitle"), dateLabel=document.getElementById("dateLabel"), todayNav=document.getElementById("todayNav"), favoritesNav=document.getElementById("favoritesNav"), currentTimeEl=document.getElementById("currentTime"), remainingGamesEl=document.getElementById("remainingGames"), sportTabs=document.getElementById("sportTabs"), settingsBackdrop=document.getElementById("settingsBackdrop"), sportsSettings=document.getElementById("sportsSettings"), providerOptions=document.getElementById("providerOptions"), providerNote=document.getElementById("providerNote"), viewingModeOptions=document.getElementById("viewingModeOptions"), viewingModeNote=document.getElementById("viewingModeNote"),
 profileSelect=document.getElementById("profileSelect"), activeProfileLabel=document.getElementById("activeProfileLabel"),
@@ -2631,11 +2631,23 @@ function renderCollegeGames(){
     ?`${label} Games (${filtered.length})`
     :`${label} • ${filterLabel} (${filtered.length})`;
 
+  if(activeCollegeFilter==="top25" && currentNcaafRankingMeta?.healthy){
+    const pollBits=[
+      currentNcaafRankingMeta.source||"AP Top 25",
+      currentNcaafRankingMeta.week!=null?`Week ${currentNcaafRankingMeta.week}`:null
+    ].filter(Boolean).join(" • ");
+    scheduleTitle.textContent+=` — ${pollBits}`;
+  }
+
   if(!filtered.length){
     gamesList.innerHTML="";
-    setStatus(getGameSearchQuery()
-      ? `No ${filterLabel} games match "${gameSearchInput.value.trim()}" for this date.`
-      : `No ${filterLabel} games match this sport and date.`);
+    if(activeCollegeFilter==="top25" && currentNcaafRankingMeta && !currentNcaafRankingMeta.healthy){
+      setStatus("AP Top 25 rankings are temporarily unavailable from the ranking source. Refresh in a moment.");
+    }else{
+      setStatus(getGameSearchQuery()
+        ? `No ${filterLabel} games match "${gameSearchInput.value.trim()}" for this date.`
+        : `No ${filterLabel} games match this sport and date.`);
+    }
     return;
   }
 
@@ -2935,7 +2947,7 @@ async function loadGames(){
   }
   setStatus(`${sportMeta?.label||"This sport"} is enabled in 0.1C. Its live schedule and channel feed is the next data connection step.`);
   return
-}setStatus("Loading live games... If the free backend was asleep, this can take up to about a minute.",true);try{const date=toApiDate(selectedDate);const response=await fetch(`${API_BASE}/resolve?sport=${selectedSport}&date=${date}&provider=directv`);if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json();syncServerTime(data.serverTime);currentGames=filterGamesForViewingMode(activeOrFutureGames((Array.isArray(data.games)?data.games:[]).map(game=>({...game,_sportKey:selectedSport}))));const modePrefix=selectedViewingMode==="standard"?"":`${VIEWING_MODES[selectedViewingMode].label} • `;scheduleTitle.textContent=`${modePrefix}${sportLabels[selectedSport]} Games (${currentGames.length})`;if(!currentGames.length){setStatus(selectedViewingMode==="national"?"No nationally televised linear-TV games match this sport and date.":selectedViewingMode==="local"?"No Pittsburgh / Tri-State local-team games match this sport and date.":"No games found for this sport and date.");return}if(isCollegeSport(selectedSport)){renderCollegeFilter();renderProFilter();renderCollegeGames()}else if(isProSport(selectedSport)){renderCollegeFilter();renderProFilter();renderProGames()}else{renderCollegeFilter();renderProFilter();hideStatus();renderGames(currentGames)}}catch(error){console.error(error);setStatus("Could not load live games. The backend may still be waking up; refresh in a moment.")}}
+}setStatus("Loading live games... If the free backend was asleep, this can take up to about a minute.",true);try{const date=toApiDate(selectedDate);const response=await fetch(`${API_BASE}/resolve?sport=${selectedSport}&date=${date}&provider=directv`);if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json();syncServerTime(data.serverTime);currentNcaafRankingMeta=selectedSport==="ncaaf"?{source:data.rankingSource||"AP Top 25",week:data.rankingWeek??null,season:data.rankingSeason??null,healthy:data.rankingHealthy===true,rankedTeamCount:Number(data.rankedTeamCount||0)}:null;currentGames=filterGamesForViewingMode(activeOrFutureGames((Array.isArray(data.games)?data.games:[]).map(game=>({...game,_sportKey:selectedSport}))));const modePrefix=selectedViewingMode==="standard"?"":`${VIEWING_MODES[selectedViewingMode].label} • `;scheduleTitle.textContent=`${modePrefix}${sportLabels[selectedSport]} Games (${currentGames.length})`;if(!currentGames.length){setStatus(selectedViewingMode==="national"?"No nationally televised linear-TV games match this sport and date.":selectedViewingMode==="local"?"No Pittsburgh / Tri-State local-team games match this sport and date.":"No games found for this sport and date.");return}if(isCollegeSport(selectedSport)){renderCollegeFilter();renderProFilter();renderCollegeGames()}else if(isProSport(selectedSport)){renderCollegeFilter();renderProFilter();renderProGames()}else{renderCollegeFilter();renderProFilter();hideStatus();renderGames(currentGames)}}catch(error){console.error(error);setStatus("Could not load live games. The backend may still be waking up; refresh in a moment.")}}
 function loadFavorites(){favoritesOnly=true;updateDateMeta();todayNav.classList.remove("active");favoritesNav.classList.add("active");const allFavs=getFavorites();const modeFavs=filterGamesForViewingMode(allFavs);currentGames=modeFavs;const favs=filterGamesBySearch(modeFavs);dateLabel.textContent="Favorites";const modePrefix=selectedViewingMode==="standard"?"":`${VIEWING_MODES[selectedViewingMode].label} • `;scheduleTitle.textContent=getGameSearchQuery()?`${modePrefix}Favorite Games • SEARCH (${favs.length})`:`${modePrefix}Favorite Games (${favs.length})`;if(!favs.length){gamesList.innerHTML="";setStatus(getGameSearchQuery()?`No favorite games match "${gameSearchInput.value.trim()}".`:allFavs.length?`No favorite games match ${VIEWING_MODES[selectedViewingMode].label} mode.`:"No favorite games yet. Tap ☆ on a game to save it.");return}hideStatus();renderGames(favs)}
 
 let gameSearchTimer=null;
