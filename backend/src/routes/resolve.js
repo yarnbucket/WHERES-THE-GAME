@@ -210,12 +210,21 @@ async function fetchScoreboard(config, date, groupId = null) {
 }
 
 
-async function fetchCollegeFootballRankings() {
+async function fetchCollegeFootballRankings(date) {
+  const seasonMatch = String(date || "").match(/^(\\d{4})/);
+  const season = seasonMatch ? seasonMatch[1] : String(new Date().getUTCFullYear());
+
   const url =
     "https://site.api.espn.com/apis/site/v2/sports/" +
-    "football/college-football/rankings";
+    "football/college-football/rankings" +
+    `?season=${encodeURIComponent(season)}`;
 
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    headers: {
+      "accept": "application/json",
+      "user-agent": "WTG/0.1H8i"
+    }
+  });
 
   if (!response.ok) {
     throw new Error(
@@ -239,28 +248,21 @@ function getApTop25Map(data) {
     ? data.rankings
     : [];
 
-  const apPoll =
-    rankings.find((poll) =>
-      /(^|\b)ap(\b|$).*top\s*25|associated press/i.test(
-        String(
-          poll?.name ||
-          poll?.shortName ||
-          poll?.headline ||
-          ""
-        )
-      )
-    ) ||
-    rankings.find((poll) =>
-      /top\s*25/i.test(
-        String(
-          poll?.name ||
-          poll?.shortName ||
-          poll?.headline ||
-          ""
-        )
-      )
-    ) ||
-    rankings[0];
+  const apPoll = rankings.find((poll) => {
+    const text = String(
+      poll?.name ||
+      poll?.shortName ||
+      poll?.headline ||
+      poll?.type ||
+      ""
+    ).toLowerCase();
+
+    return (
+      text.includes("ap top 25") ||
+      text.includes("associated press") ||
+      /^ap\b/.test(text)
+    );
+  });
 
   const byId = new Map();
   const byName = new Map();
@@ -269,7 +271,8 @@ function getApTop25Map(data) {
     const rank = Number(
       item?.current ??
       item?.rank ??
-      item?.currentRank
+      item?.currentRank ??
+      item?.ranking
     );
 
     if (!Number.isFinite(rank) || rank < 1 || rank > 25) {
@@ -277,9 +280,12 @@ function getApTop25Map(data) {
     }
 
     const team = item?.team ?? {};
-    const id = team?.id != null
-      ? String(team.id)
-      : null;
+    const id =
+      team?.id != null
+        ? String(team.id)
+        : item?.teamId != null
+          ? String(item.teamId)
+          : null;
 
     if (id) {
       byId.set(id, rank);
@@ -290,7 +296,9 @@ function getApTop25Map(data) {
       team?.shortDisplayName,
       team?.name,
       team?.location,
-      item?.teamName
+      team?.abbreviation,
+      item?.teamName,
+      item?.name
     ]) {
       const normalized = normalizeRankTeamName(name);
       if (normalized) {
@@ -305,7 +313,18 @@ function getApTop25Map(data) {
     pollName:
       apPoll?.name ||
       apPoll?.shortName ||
-      "AP Top 25"
+      "AP Top 25",
+    rankedTeamCount: byId.size || byName.size,
+    week:
+      data?.latestWeek?.number ??
+      data?.week?.number ??
+      apPoll?.week ??
+      null,
+    season:
+      data?.latestSeason?.year ??
+      data?.season?.year ??
+      null,
+    healthy: Boolean(apPoll && (byId.size || byName.size))
   };
 }
 
@@ -350,7 +369,10 @@ function applyCollegeFootballRankings(games, rankMap) {
       rankForGameTeam(game, "home", rankMap) ??
       game?.homeRank ??
       null,
-    rankingPoll: rankMap.pollName
+    rankingPoll: rankMap.pollName,
+    rankingWeek: rankMap.week,
+    rankingSeason: rankMap.season,
+    rankingHealthy: rankMap.healthy
   }));
 }
 
@@ -432,10 +454,24 @@ async function getBaseGames(sportKey, config, date) {
   // current AP Top 25 to each scheduled game by stable team ID/name.
   try {
     const rankingData =
-      await fetchCollegeFootballRankings();
+      await fetchCollegeFootballRankings(date);
 
     const rankMap =
       getApTop25Map(rankingData);
+
+    if (!rankMap.healthy) {
+      console.error(
+        "AP Top 25 rankings were returned without usable ranked teams."
+      );
+
+      return games.map((game) => ({
+        ...game,
+        rankingPoll: rankMap.pollName,
+        rankingWeek: rankMap.week,
+        rankingSeason: rankMap.season,
+        rankingHealthy: false
+      }));
+    }
 
     return applyCollegeFootballRankings(
       games,
@@ -547,6 +583,31 @@ router.get("/", async (req, res) => {
       rankingSource:
         sportKey === "ncaaf"
           ? (games.find((g) => g?.rankingPoll)?.rankingPoll || null)
+          : undefined,
+      rankingWeek:
+        sportKey === "ncaaf"
+          ? (games.find((g) => g?.rankingWeek != null)?.rankingWeek ?? null)
+          : undefined,
+      rankingSeason:
+        sportKey === "ncaaf"
+          ? (games.find((g) => g?.rankingSeason != null)?.rankingSeason ?? null)
+          : undefined,
+      rankingHealthy:
+        sportKey === "ncaaf"
+          ? Boolean(games.find((g) => g?.rankingHealthy === true))
+          : undefined,
+      rankedTeamCount:
+        sportKey === "ncaaf"
+          ? new Set(
+              games.flatMap((g) => [
+                Number(g?.awayRank) >= 1 && Number(g?.awayRank) <= 25
+                  ? String(g?.awayTeamId || g?.away || "")
+                  : null,
+                Number(g?.homeRank) >= 1 && Number(g?.homeRank) <= 25
+                  ? String(g?.homeTeamId || g?.home || "")
+                  : null
+              ]).filter(Boolean)
+            ).size
           : undefined,
       games
     });
