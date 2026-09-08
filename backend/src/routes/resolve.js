@@ -519,6 +519,244 @@ async function addDirectvGuideData(game, sportKey) {
   }
 }
 
+
+function normalizeSearchValue(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function fetchLeagueTeams(config) {
+  const url =
+    `https://site.api.espn.com/apis/site/v2/sports/` +
+    `${config.sport}/${config.league}/teams?limit=2000`;
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`ESPN teams request failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+function extractTeams(data) {
+  const output = [];
+
+  const walk = (value) => {
+    if (!value || typeof value !== "object") return;
+
+    if (Array.isArray(value)) {
+      value.forEach(walk);
+      return;
+    }
+
+    const team = value?.team;
+    if (
+      team &&
+      typeof team === "object" &&
+      team.id != null &&
+      (team.displayName || team.name)
+    ) {
+      output.push(team);
+    }
+
+    for (const child of Object.values(value)) {
+      if (child && typeof child === "object") walk(child);
+    }
+  };
+
+  walk(data);
+
+  const seen = new Set();
+  return output.filter((team) => {
+    const id = String(team?.id ?? "");
+    if (!id || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+}
+
+function teamSearchText(team) {
+  return normalizeSearchValue([
+    team?.displayName,
+    team?.shortDisplayName,
+    team?.name,
+    team?.nickname,
+    team?.location,
+    team?.abbreviation
+  ].filter(Boolean).join(" "));
+}
+
+function teamMatchesNextSearch(team, query) {
+  const normalized = normalizeSearchValue(query);
+  if (!normalized) return false;
+
+  const haystack = teamSearchText(team);
+  const terms = normalized.split(" ").filter(Boolean);
+
+  return terms.every((term) => haystack.includes(term));
+}
+
+async function fetchTeamSchedule(config, teamId, season) {
+  const url =
+    `https://site.api.espn.com/apis/site/v2/sports/` +
+    `${config.sport}/${config.league}/teams/` +
+    `${encodeURIComponent(teamId)}/schedule` +
+    `?season=${encodeURIComponent(season)}`;
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`ESPN team schedule request failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+function scheduleEvents(data) {
+  if (Array.isArray(data?.events)) return data.events;
+  if (Array.isArray(data?.schedule)) return data.schedule;
+  return [];
+}
+
+async function nextGameForTeam(sportKey, config, team, providerKey) {
+  const now = Date.now();
+  const thisYear = new Date().getUTCFullYear();
+  const seasons = [thisYear, thisYear + 1];
+
+  const results = await Promise.allSettled(
+    seasons.map((season) =>
+      fetchTeamSchedule(config, team.id, season)
+    )
+  );
+
+  const events = results
+    .filter((result) => result.status === "fulfilled")
+    .flatMap((result) => scheduleEvents(result.value));
+
+  const upcoming = events
+    .filter((event) => {
+      const when = new Date(event?.date || 0).getTime();
+      const status = String(
+        event?.status?.type?.state ||
+        event?.status?.type?.name ||
+        event?.status?.type?.description ||
+        ""
+      ).toLowerCase();
+
+      return (
+        Number.isFinite(when) &&
+        when >= now &&
+        !status.includes("final") &&
+        !status.includes("post")
+      );
+    })
+    .sort((a, b) =>
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+  if (!upcoming.length) return null;
+
+  let game = normalizeEvent(
+    upcoming[0],
+    config.label,
+    {}
+  );
+
+  game = {
+    ...game,
+    _sportKey: sportKey,
+    searchTeamId: String(team.id),
+    searchTeamName: team.displayName || team.name || null
+  };
+
+  game = resolveGame(game, providerKey);
+  game = await addDirectvGuideData(game, sportKey);
+
+  return game;
+}
+
+router.get("/next", async (req, res) => {
+  const query = String(req.query.q || "").trim();
+  const providerKey = String(req.query.provider || "directv")
+    .toLowerCase()
+    .trim();
+
+  if (!query) {
+    return res.json({
+      status: "ok",
+      query,
+      count: 0,
+      games: []
+    });
+  }
+
+  try {
+    const leagueResults = await Promise.allSettled(
+      Object.entries(SPORTS).map(async ([sportKey, config]) => {
+        const teamData = await fetchLeagueTeams(config);
+        const teams = extractTeams(teamData)
+          .filter((team) => teamMatchesNextSearch(team, query))
+          .slice(0, 8);
+
+        const games = await Promise.all(
+          teams.map((team) =>
+            nextGameForTeam(
+              sportKey,
+              config,
+              team,
+              providerKey
+            )
+          )
+        );
+
+        return games.filter(Boolean);
+      })
+    );
+
+    const allGames = leagueResults
+      .filter((result) => result.status === "fulfilled")
+      .flatMap((result) => result.value)
+      .filter(Boolean);
+
+    // If a city/search phrase matched more than one team, show each
+    // matching team's next game, with the soonest game first.
+    const deduped = [];
+    const seen = new Set();
+
+    for (const game of allGames.sort(
+      (a, b) =>
+        new Date(a.startTime).getTime() -
+        new Date(b.startTime).getTime()
+    )) {
+      const key = `${game._sportKey}:${game.searchTeamId}:${game.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      deduped.push(game);
+    }
+
+    return res.json({
+      status: "ok",
+      query,
+      count: deduped.length,
+      games: deduped
+    });
+  } catch (error) {
+    console.error("Next-game search error:", error);
+
+    return res.status(500).json({
+      status: "error",
+      query,
+      count: 0,
+      games: []
+    });
+  }
+});
+
 router.get("/", async (req, res) => {
   const sportKey = String(
     req.query.sport ?? "mlb"
