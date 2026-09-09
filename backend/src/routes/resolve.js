@@ -41,6 +41,14 @@ const SPORTS = {
       { league: "liv", label: "LIV Golf" },
       { league: "eur", label: "DP World Tour" }
     ]
+  },
+  tennis: {
+    sport: "tennis",
+    label: "Tennis",
+    leagues: [
+      { league: "atp", label: "ATP" },
+      { league: "wta", label: "WTA" }
+    ]
   }
 };
 
