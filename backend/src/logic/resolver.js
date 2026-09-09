@@ -459,14 +459,9 @@ export function resolveGame(
     : null;
 
   return {
-    id: game.id ?? null,
-    sport: game.sport ?? null,
-    name: game.name ?? null,
-    away: game.away ?? null,
-    home: game.home ?? null,
-    startTime: game.startTime ?? null,
-    status: game.status ?? null,
-    venue: game.venue ?? null,
+    // Preserve all schedule metadata, including NCAA division,
+    // conference, team IDs, rankings, and future fields.
+    ...game,
 
     broadcast:
       game.network ?? null,
@@ -476,7 +471,7 @@ export function resolveGame(
     sources,
     streaming,
 
-    // New provider system
+    // Provider system
     providerKey,
     providerChannels,
     leaguePackage
