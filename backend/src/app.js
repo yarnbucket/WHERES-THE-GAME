@@ -8,6 +8,7 @@ import eventsRoute from "./routes/events.js";
 import channelsRoute from "./routes/channels.js";
 import streamingRoute from "./routes/streaming.js";
 import blackoutRoute from "./routes/blackout.js";
+import otherFootballRoute from "./routes/otherFootball.js";
 import resolveRoute from "./routes/resolve.js";
 
 const app = express();
@@ -58,6 +59,10 @@ app.use("/events", eventsRoute);
 app.use("/channels", channelsRoute);
 app.use("/streaming", streamingRoute);
 app.use("/blackout", blackoutRoute);
+
+// Other Football intercepts sport=otherfootball and passes all
+// other /resolve requests through to the existing resolver.
+app.use("/resolve", otherFootballRoute);
 app.use("/resolve", resolveRoute);
 
 // Root endpoint
