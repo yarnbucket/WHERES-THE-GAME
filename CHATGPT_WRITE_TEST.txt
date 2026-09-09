@@ -1,2 +1,0 @@
-ChatGPT write test — 2026-09-09
-This file confirms that ChatGPT can modify the WTG GitHub repository from this chat.
