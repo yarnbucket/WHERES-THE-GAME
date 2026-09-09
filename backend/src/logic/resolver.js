@@ -31,6 +31,8 @@ const DIRECTV_CHANNELS = {
 
   // Other national sports networks
   "CBS Sports Network": "221",
+  "Golf Channel": "218",
+  GOLF: "218",
 
   // College sports
   SEC: "611",
