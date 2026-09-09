@@ -58,11 +58,97 @@ function normalizeDate(value) {
   return String(value).replaceAll("-", "").trim();
 }
 
+function uniqueNames(values) {
+  return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))];
+}
+
+function broadcastNamesFromList(broadcasts) {
+  return uniqueNames((broadcasts ?? []).flatMap((broadcast) => [
+    ...(broadcast?.names ?? []),
+    broadcast?.name,
+    broadcast?.shortName,
+    broadcast?.displayName,
+    broadcast?.media?.name,
+    broadcast?.media?.shortName,
+    broadcast?.media?.displayName,
+    broadcast?.network?.name,
+    broadcast?.network?.shortName,
+    broadcast?.network?.displayName
+  ]));
+}
+
 function getBroadcast(competition) {
-  const names = (competition?.broadcasts ?? [])
-    .flatMap((broadcast) => broadcast?.names ?? [])
-    .filter(Boolean);
-  return [...new Set(names)].join(", ");
+  return broadcastNamesFromList(competition?.broadcasts).join(", ");
+}
+
+function getGolfEmbeddedBroadcast(event) {
+  const competition = event?.competitions?.[0];
+  const names = uniqueNames([
+    ...broadcastNamesFromList(competition?.broadcasts),
+    ...broadcastNamesFromList(event?.broadcasts),
+    event?.network,
+    competition?.network,
+    event?.broadcast,
+    competition?.broadcast
+  ]);
+  return names.join(", ");
+}
+
+function golfCoreBroadcastNames(data) {
+  const items = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
+  return uniqueNames(items.flatMap((item) => [
+    ...(item?.names ?? []),
+    item?.name,
+    item?.shortName,
+    item?.displayName,
+    item?.media?.name,
+    item?.media?.shortName,
+    item?.media?.displayName,
+    item?.network?.name,
+    item?.network?.shortName,
+    item?.network?.displayName
+  ])).filter((name) => !/^(national|regional|international|domestic|english|spanish)$/i.test(name));
+}
+
+async function fetchGolfBroadcast(event, league) {
+  const embedded = getGolfEmbeddedBroadcast(event);
+  if (embedded) return embedded;
+
+  const eventId = event?.id;
+  const competitionId = event?.competitions?.[0]?.id ?? eventId;
+  if (!eventId || !competitionId) return "";
+
+  try {
+    const summaryUrl = `https://site.api.espn.com/apis/site/v2/sports/golf/${league}/summary?event=${encodeURIComponent(eventId)}`;
+    const summaryResponse = await fetch(summaryUrl, { headers: { accept: "application/json", "user-agent": "WTG/0.1H8k" } });
+    if (summaryResponse.ok) {
+      const summary = await summaryResponse.json();
+      const headerCompetition = summary?.header?.competitions?.[0];
+      const summaryNames = uniqueNames([
+        ...broadcastNamesFromList(headerCompetition?.broadcasts),
+        ...broadcastNamesFromList(summary?.broadcasts),
+        summary?.header?.network,
+        headerCompetition?.network
+      ]);
+      if (summaryNames.length) return summaryNames.join(", ");
+    }
+  } catch (error) {
+    console.error("Golf summary broadcast lookup error:", error);
+  }
+
+  try {
+    const coreUrl = `https://sports.core.api.espn.com/v2/sports/golf/leagues/${league}/events/${encodeURIComponent(eventId)}/competitions/${encodeURIComponent(competitionId)}/broadcasts?lang=en&region=us&limit=100`;
+    const coreResponse = await fetch(coreUrl, { headers: { accept: "application/json", "user-agent": "WTG/0.1H8k" } });
+    if (coreResponse.ok) {
+      const core = await coreResponse.json();
+      const names = golfCoreBroadcastNames(core);
+      if (names.length) return names.join(", ");
+    }
+  } catch (error) {
+    console.error("Golf core broadcast lookup error:", error);
+  }
+
+  return "";
 }
 
 function getConferenceTag(competitor) {
@@ -101,7 +187,7 @@ function normalizeEvent(event, sportLabel, metadata = {}) {
   };
 }
 
-function normalizeSingleEvent(event, sportLabel, leagueLabel, fallbackName) {
+function normalizeSingleEvent(event, sportLabel, leagueLabel, fallbackName, networkOverride = null) {
   const competition = event?.competitions?.[0];
   const eventName = event?.name ?? competition?.name ?? fallbackName;
   return {
@@ -115,7 +201,7 @@ function normalizeSingleEvent(event, sportLabel, leagueLabel, fallbackName) {
     homeTeamId: null,
     startTime: event?.date ?? competition?.date ?? null,
     status: event?.status?.type?.description ?? competition?.status?.type?.description ?? null,
-    network: getBroadcast(competition),
+    network: networkOverride ?? getBroadcast(competition),
     venue: competition?.venue?.fullName ?? event?.venue?.fullName ?? null,
     division: null,
     conferences: { away: { id: null, name: null }, home: { id: null, name: null } },
@@ -129,8 +215,9 @@ function normalizeRacingEvent(event, leagueLabel) {
   return normalizeSingleEvent(event, "Racing", leagueLabel, "Race");
 }
 
-function normalizeGolfEvent(event, leagueLabel) {
-  return normalizeSingleEvent(event, "Golf", leagueLabel, "Golf Tournament");
+async function normalizeGolfEvent(event, leagueLabel, leagueSlug) {
+  const network = await fetchGolfBroadcast(event, leagueSlug);
+  return normalizeSingleEvent(event, "Golf", leagueLabel, "Golf Tournament", network || null);
 }
 
 async function fetchScoreboard(config, date, groupId = null) {
@@ -226,9 +313,12 @@ async function getBaseGames(sportKey, config, date) {
     const results = await Promise.allSettled(
       config.leagues.map(async (leagueConfig) => {
         const data = await fetchScoreboard({ sport: config.sport, league: leagueConfig.league }, date);
-        return (data.events ?? []).map((event) => {
+        const events = data.events ?? [];
+        if (sportKey === "golf") {
+          return Promise.all(events.map((event) => normalizeGolfEvent(event, leagueConfig.label, leagueConfig.league)));
+        }
+        return events.map((event) => {
           if (sportKey === "racing") return normalizeRacingEvent(event, leagueConfig.label);
-          if (sportKey === "golf") return normalizeGolfEvent(event, leagueConfig.label);
           return normalizeEvent(event, config.label, { league: leagueConfig.label });
         });
       })
