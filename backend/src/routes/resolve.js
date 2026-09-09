@@ -18,6 +18,7 @@ const SPORTS = {
   },
   mlb: { sport: "baseball", league: "mlb", label: "MLB" },
   nhl: { sport: "hockey", league: "nhl", label: "NHL" },
+  collegehockey: { sport: "hockey", league: "mens-college-hockey", label: "College Hockey" },
   nba: { sport: "basketball", league: "nba", label: "NBA" },
   ncaab: { sport: "basketball", league: "mens-college-basketball", label: "NCAA Basketball" }
 };
