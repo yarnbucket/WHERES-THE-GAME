@@ -22,7 +22,16 @@ const SPORTS = {
   nba: { sport: "basketball", league: "nba", label: "NBA" },
   ncaab: { sport: "basketball", league: "mens-college-basketball", label: "NCAA Basketball" },
   ncaaw: { sport: "basketball", league: "womens-college-basketball", label: "NCAA Women's Basketball" },
-  wnba: { sport: "basketball", league: "wnba", label: "WNBA" }
+  wnba: { sport: "basketball", league: "wnba", label: "WNBA" },
+  racing: {
+    sport: "racing",
+    label: "Racing",
+    leagues: [
+      { league: "f1", label: "Formula 1" },
+      { league: "nascar-premier", label: "NASCAR Cup" },
+      { league: "irl", label: "IndyCar" }
+    ]
+  }
 };
 
 const NCAA_GROUPS = [
@@ -79,6 +88,30 @@ function normalizeEvent(event, sportLabel, metadata = {}) {
     conferenceIds: [...new Set(conferenceIds)],
     awayRank: awayTeam?.curatedRank?.current ?? awayTeam?.rank ?? awayTeam?.team?.rank ?? null,
     homeRank: homeTeam?.curatedRank?.current ?? homeTeam?.rank ?? homeTeam?.team?.rank ?? null
+  };
+}
+
+function normalizeRacingEvent(event, leagueLabel) {
+  const competition = event?.competitions?.[0];
+  const eventName = event?.name ?? competition?.name ?? "Race";
+  return {
+    id: event?.id ?? null,
+    sport: "Racing",
+    league: leagueLabel,
+    name: eventName,
+    away: leagueLabel,
+    home: eventName,
+    awayTeamId: null,
+    homeTeamId: null,
+    startTime: event?.date ?? competition?.date ?? null,
+    status: event?.status?.type?.description ?? competition?.status?.type?.description ?? null,
+    network: getBroadcast(competition),
+    venue: competition?.venue?.fullName ?? event?.venue?.fullName ?? null,
+    division: null,
+    conferences: { away: { id: null, name: null }, home: { id: null, name: null } },
+    conferenceIds: [],
+    awayRank: null,
+    homeRank: null
   };
 }
 
@@ -171,11 +204,15 @@ function dedupeGames(games) {
 }
 
 async function getBaseGames(sportKey, config, date) {
-  if (sportKey === "otherfootball") {
+  if (Array.isArray(config?.leagues)) {
     const results = await Promise.allSettled(
       config.leagues.map(async (leagueConfig) => {
         const data = await fetchScoreboard({ sport: config.sport, league: leagueConfig.league }, date);
-        return (data.events ?? []).map((event) => normalizeEvent(event, config.label, { league: leagueConfig.label }));
+        return (data.events ?? []).map((event) =>
+          sportKey === "racing"
+            ? normalizeRacingEvent(event, leagueConfig.label)
+            : normalizeEvent(event, config.label, { league: leagueConfig.label })
+        );
       })
     );
     return dedupeGames(results.filter((result) => result.status === "fulfilled").flatMap((result) => result.value));
@@ -329,7 +366,7 @@ router.get("/", async (req, res) => {
     const games = await Promise.all(resolvedGames.map((game) => addDirectvGuideData(game, sportKey)));
     return res.json({
       status: "ok", sport: sportKey, date, provider: providerKey, count: games.length,
-      leagues: sportKey === "otherfootball" ? config.leagues.map((league) => league.label) : undefined,
+      leagues: Array.isArray(config?.leagues) ? config.leagues.map((league) => league.label) : undefined,
       divisions: sportKey === "ncaaf" ? ["FBS", "FCS", "DII", "DIII"] : undefined,
       rankingSource: sportKey === "ncaaf" ? (games.find((g) => g?.rankingPoll)?.rankingPoll || null) : undefined,
       rankingWeek: sportKey === "ncaaf" ? (games.find((g) => g?.rankingWeek != null)?.rankingWeek ?? null) : undefined,
