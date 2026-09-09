@@ -21,7 +21,8 @@ const SPORTS = {
   collegehockey: { sport: "hockey", league: "mens-college-hockey", label: "College Hockey" },
   nba: { sport: "basketball", league: "nba", label: "NBA" },
   ncaab: { sport: "basketball", league: "mens-college-basketball", label: "NCAA Basketball" },
-  ncaaw: { sport: "basketball", league: "womens-college-basketball", label: "NCAA Women's Basketball" }
+  ncaaw: { sport: "basketball", league: "womens-college-basketball", label: "NCAA Women's Basketball" },
+  wnba: { sport: "basketball", league: "wnba", label: "WNBA" }
 };
 
 const NCAA_GROUPS = [
