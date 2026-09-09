@@ -4,18 +4,8 @@ import { resolveGame } from "../logic/resolver.js";
 const router = express.Router();
 
 const OTHER_FOOTBALL_LEAGUES = [
-  {
-    key: "cfl",
-    sport: "football",
-    league: "cfl",
-    label: "CFL"
-  },
-  {
-    key: "ufl",
-    sport: "football",
-    league: "ufl",
-    label: "UFL"
-  }
+  { key: "cfl", sport: "football", league: "cfl", label: "CFL" },
+  { key: "ufl", sport: "football", league: "ufl", label: "UFL" }
 ];
 
 const CFL_TEAMS = [
@@ -31,9 +21,7 @@ const CFL_TEAMS = [
 ];
 
 function normalizeDate(value) {
-  if (!value) {
-    return new Date().toISOString().slice(0, 10).replaceAll("-", "");
-  }
+  if (!value) return new Date().toISOString().slice(0, 10).replaceAll("-", "");
   return String(value).replaceAll("-", "").trim();
 }
 
@@ -42,14 +30,12 @@ function dateKeyFromEvent(event) {
   if (!raw) return null;
   const date = new Date(raw);
   if (!Number.isFinite(date.getTime())) return null;
-
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
     year: "numeric",
     month: "2-digit",
     day: "2-digit"
   }).formatToParts(date);
-
   const year = parts.find((part) => part.type === "year")?.value;
   const month = parts.find((part) => part.type === "month")?.value;
   const day = parts.find((part) => part.type === "day")?.value;
@@ -68,7 +54,6 @@ function normalizeEvent(event, config, metadata = {}) {
   const competitors = competition?.competitors ?? [];
   const homeTeam = competitors.find((team) => team.homeAway === "home");
   const awayTeam = competitors.find((team) => team.homeAway === "away");
-
   return {
     id: event?.id ?? null,
     sport: config.label,
@@ -89,10 +74,7 @@ function normalizeEvent(event, config, metadata = {}) {
 
 async function fetchJson(url, label) {
   const response = await fetch(url, {
-    headers: {
-      accept: "application/json",
-      "user-agent": "WTG/other-football"
-    }
+    headers: { accept: "application/json", "user-agent": "WTG/other-football" }
   });
   if (!response.ok) throw new Error(`${label} request failed: ${response.status}`);
   return response.json();
@@ -102,7 +84,7 @@ async function fetchText(url, label) {
   const response = await fetch(url, {
     headers: {
       accept: "text/html,application/xhtml+xml",
-      "user-agent": "Mozilla/5.0 WTG/other-football"
+      "user-agent": "Mozilla/5.0 (Linux; Android 17) AppleWebKit/537.36 Chrome/140 Safari/537.36 WTG"
     }
   });
   if (!response.ok) throw new Error(`${label} request failed: ${response.status}`);
@@ -136,8 +118,7 @@ function htmlToScheduleText(html) {
 }
 
 function monthIndex(shortMonth) {
-  return ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-    .indexOf(shortMonth);
+  return ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].indexOf(shortMonth);
 }
 
 function easternLocalToIso(year, month, day, hour, minute) {
@@ -147,21 +128,18 @@ function easternLocalToIso(year, month, day, hour, minute) {
     timeZoneName: "shortOffset",
     hour: "2-digit"
   }).formatToParts(probe).find((part) => part.type === "timeZoneName")?.value || "GMT-5";
-
   const match = zoneName.match(/GMT([+-])(\d{1,2})(?::(\d{2}))?/i);
   let offsetMinutes = -300;
   if (match) {
     const sign = match[1] === "+" ? 1 : -1;
     offsetMinutes = sign * (Number(match[2]) * 60 + Number(match[3] || 0));
   }
-
   return new Date(Date.UTC(year, month - 1, day, hour, minute) - offsetMinutes * 60000).toISOString();
 }
 
 function findCflTeams(block) {
   const lower = block.toLowerCase();
   const hits = [];
-
   for (const team of CFL_TEAMS) {
     const candidates = [team.name, `${team.name} logo`, team.abbr];
     let best = -1;
@@ -171,12 +149,11 @@ function findCflTeams(block) {
     }
     if (best >= 0) hits.push({ ...team, index: best });
   }
-
   return hits.sort((a, b) => a.index - b.index);
 }
 
 function networksFromOfficialBlock(block) {
-  const known = ["CBS Sports Network", "CFL+", "CTV", "TSN", "RDS"];
+  const known = ["CBS Sports Network", "CBSSN", "CFL+", "CTV", "TSN", "RDS", "RDS2"];
   return known.filter((name) => new RegExp(name.replace("+", "\\+"), "i").test(block)).join(", ");
 }
 
@@ -187,7 +164,7 @@ function parseOfficialCflSchedule(html, dateKey) {
   const day = Number(String(dateKey).slice(6, 8));
   if (!year || !month || !day) return [];
 
-  const datePattern = /(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})\s+(\d{1,2}:\d{2})\s*([ap])\.?m\.?\s*ET/gi;
+  const datePattern = /(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})\s+(\d{1,2}:\d{2})\s*([ap])\.?\s*m\.?\s*ET/gi;
   const matches = [...text.matchAll(datePattern)];
   const games = [];
 
@@ -196,13 +173,11 @@ function parseOfficialCflSchedule(html, dateKey) {
     const matchMonth = monthIndex(match[2]) + 1;
     const matchDay = Number(match[3]);
     if (matchMonth !== month || matchDay !== day) continue;
-
     const start = match.index + match[0].length;
     const end = i + 1 < matches.length ? matches[i + 1].index : Math.min(text.length, start + 2500);
     const block = text.slice(start, end);
     const teams = findCflTeams(block);
     if (teams.length < 2) continue;
-
     const [awayTeam, homeTeam] = teams;
     const [clock, minuteText] = match[4].split(":");
     let hour = Number(clock);
@@ -210,14 +185,13 @@ function parseOfficialCflSchedule(html, dateKey) {
     const meridiem = match[5].toLowerCase();
     if (meridiem === "p" && hour !== 12) hour += 12;
     if (meridiem === "a" && hour === 12) hour = 0;
-
     games.push({
       id: `cfl-${dateKey}-${awayTeam.abbr}-${homeTeam.abbr}`,
       sport: "CFL",
       league: "cfl",
       leagueLabel: "CFL",
       source: "cfl.ca-schedule",
-      sourceUrl: `https://www.cfl.ca/schedule/${year}/`,
+      sourceUrl: "https://cfl.prod.s.cfl.ca/schedule?modalType=ticket-selector",
       name: `${awayTeam.name} at ${homeTeam.name}`,
       away: awayTeam.name,
       home: homeTeam.name,
@@ -229,18 +203,17 @@ function parseOfficialCflSchedule(html, dateKey) {
       venue: null
     });
   }
-
   return dedupeGames(games);
 }
 
 async function fetchOfficialCflGames(date) {
   const season = String(date).slice(0, 4);
   const urls = [
+    "https://cfl.prod.s.cfl.ca/schedule?modalType=ticket-selector",
+    `https://staging-www.cfl.ca/schedule/${season}/`,
     `https://www.cfl.ca/schedule/${season}/`,
-    `https://cfl.prod.s.cfl.ca/schedule/${season}/`,
-    `https://cfl.prod.s.cfl.ca/schedule`
+    "https://cfl.prod.s.cfl.ca/schedule"
   ];
-
   let lastError = null;
   for (const url of urls) {
     try {
@@ -254,7 +227,6 @@ async function fetchOfficialCflGames(date) {
       lastError = error;
     }
   }
-
   throw lastError || new Error("Official CFL schedule lookup failed");
 }
 
@@ -281,7 +253,6 @@ async function fetchLeagueGames(config, date) {
       };
     }
   }
-
   const games = await fetchEspnScoreboardGames(config, date);
   return { games, source: "espn-scoreboard", fallbackUsed: false };
 }
@@ -301,14 +272,11 @@ function dedupeGames(games) {
 router.get("/", async (req, res, next) => {
   const sportKey = String(req.query.sport ?? "").toLowerCase().trim();
   if (sportKey !== "otherfootball") return next();
-
   const date = normalizeDate(req.query.date);
   const providerKey = String(req.query.provider ?? "directv").toLowerCase().trim();
-
   const results = await Promise.allSettled(
     OTHER_FOOTBALL_LEAGUES.map((config) => fetchLeagueGames(config, date))
   );
-
   const sourceStatus = OTHER_FOOTBALL_LEAGUES.map((config, index) => {
     const result = results[index];
     return {
@@ -324,36 +292,20 @@ router.get("/", async (req, res, next) => {
         : result.value?.error ?? null
     };
   });
-
   const successfulGames = results
     .filter((result) => result.status === "fulfilled")
     .flatMap((result) => result.value.games);
-
   if (!successfulGames.length && results.every((result) => result.status === "rejected")) {
     console.error("Other Football sources failed:", sourceStatus);
     return res.status(502).json({
-      status: "error",
-      sport: sportKey,
-      date,
-      provider: providerKey,
-      count: 0,
-      leagues: OTHER_FOOTBALL_LEAGUES.map((item) => item.key),
-      sources: sourceStatus,
-      games: []
+      status: "error", sport: sportKey, date, provider: providerKey, count: 0,
+      leagues: OTHER_FOOTBALL_LEAGUES.map((item) => item.key), sources: sourceStatus, games: []
     });
   }
-
   const games = dedupeGames(successfulGames).map((game) => resolveGame(game, providerKey));
-
   return res.json({
-    status: "ok",
-    sport: sportKey,
-    date,
-    provider: providerKey,
-    count: games.length,
-    leagues: OTHER_FOOTBALL_LEAGUES.map((item) => item.key),
-    sources: sourceStatus,
-    games
+    status: "ok", sport: sportKey, date, provider: providerKey, count: games.length,
+    leagues: OTHER_FOOTBALL_LEAGUES.map((item) => item.key), sources: sourceStatus, games
   });
 });
 
