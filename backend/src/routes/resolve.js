@@ -1,5 +1,6 @@
 import express from "express";
-import { resolveEvent } from "../logic/resolver.js";
+
+import { resolveGame } from "../logic/resolver.js";
 import { lookupDirectvGame } from "../logic/directvGuide.js";
 
 const router = express.Router();
@@ -23,102 +24,322 @@ const SPORTS = {
   ncaaw: { sport: "basketball", league: "womens-college-basketball", label: "NCAA Women's Basketball" }
 };
 
-function yyyymmdd(date) {
-  return String(date || "").replace(/-/g, "");
+const NCAA_GROUPS = [
+  { id: "80", division: "FBS" },
+  { id: "81", division: "FCS" },
+  { id: "57", division: "DII" },
+  { id: "58", division: "DIII" }
+];
+
+const NCAA_DIVISION_PRIORITY = { FBS: 0, FCS: 1, DII: 2, DIII: 3 };
+
+function normalizeDate(value) {
+  if (!value) return new Date().toISOString().slice(0, 10).replaceAll("-", "");
+  return String(value).replaceAll("-", "").trim();
 }
 
-async function fetchScoreboard(sport, league, date) {
-  const url = `https://site.api.espn.com/apis/site/v2/sports/${sport}/${league}/scoreboard?dates=${yyyymmdd(date)}`;
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0",
-      Accept: "application/json"
-    }
-  });
-
-  if (!response.ok) {
-    throw new Error(`ESPN scoreboard ${response.status}`);
-  }
-
-  return response.json();
+function getBroadcast(competition) {
+  const names = (competition?.broadcasts ?? [])
+    .flatMap((broadcast) => broadcast?.names ?? [])
+    .filter(Boolean);
+  return [...new Set(names)].join(", ");
 }
 
-function normalizeEvent(event, sportKey, config) {
-  const competition = event?.competitions?.[0] || {};
-  const competitors = competition?.competitors || [];
-  const away = competitors.find((team) => team.homeAway === "away") || competitors[0] || {};
-  const home = competitors.find((team) => team.homeAway === "home") || competitors[1] || {};
-  const broadcasts = competition?.broadcasts || [];
-  const broadcastNames = broadcasts.flatMap((b) => b?.names || []).filter(Boolean);
-  const network = broadcastNames[0] || competition?.geoBroadcasts?.[0]?.media?.shortName || "";
+function getConferenceTag(competitor) {
+  const id = competitor?.team?.conferenceId ?? competitor?.conferenceId ?? null;
+  const name = competitor?.team?.conference?.name ?? competitor?.conference?.name ?? competitor?.team?.conferenceName ?? null;
+  return { id: id == null ? null : String(id), name: name || null };
+}
+
+function normalizeEvent(event, sportLabel, metadata = {}) {
+  const competition = event?.competitions?.[0];
+  const competitors = competition?.competitors ?? [];
+  const homeTeam = competitors.find((team) => team.homeAway === "home");
+  const awayTeam = competitors.find((team) => team.homeAway === "away");
+  const homeConference = getConferenceTag(homeTeam);
+  const awayConference = getConferenceTag(awayTeam);
+  const conferenceIds = [awayConference.id, homeConference.id].filter(Boolean);
 
   return {
-    id: event?.id,
-    sport: sportKey,
-    league: config.league,
-    leagueLabel: config.label,
-    name: event?.name || `${away?.team?.displayName || "Away"} at ${home?.team?.displayName || "Home"}`,
-    shortName: event?.shortName || "",
-    away: away?.team?.displayName || away?.team?.shortDisplayName || "Away",
-    home: home?.team?.displayName || home?.team?.shortDisplayName || "Home",
-    awayAbbr: away?.team?.abbreviation || "",
-    homeAbbr: home?.team?.abbreviation || "",
-    awayId: away?.team?.id || "",
-    homeId: home?.team?.id || "",
-    awayLogo: away?.team?.logo || "",
-    homeLogo: home?.team?.logo || "",
-    startTime: event?.date || competition?.date || "",
-    status: event?.status?.type?.name || event?.status?.type?.description || "",
-    statusDetail: event?.status?.type?.detail || "",
-    completed: Boolean(event?.status?.type?.completed),
-    network,
-    broadcasts: broadcastNames,
-    venue: competition?.venue?.fullName || "",
-    city: competition?.venue?.address?.city || "",
-    state: competition?.venue?.address?.state || "",
-    directvGuide: []
+    id: event?.id ?? null,
+    sport: sportLabel,
+    league: metadata.league ?? null,
+    name: event?.name ?? null,
+    away: awayTeam?.team?.displayName ?? "Away",
+    home: homeTeam?.team?.displayName ?? "Home",
+    awayTeamId: awayTeam?.team?.id != null ? String(awayTeam.team.id) : null,
+    homeTeamId: homeTeam?.team?.id != null ? String(homeTeam.team.id) : null,
+    startTime: event?.date ?? null,
+    status: event?.status?.type?.description ?? null,
+    network: getBroadcast(competition),
+    venue: competition?.venue?.fullName ?? null,
+    division: metadata.division ?? null,
+    conferences: { away: awayConference, home: homeConference },
+    conferenceIds: [...new Set(conferenceIds)],
+    awayRank: awayTeam?.curatedRank?.current ?? awayTeam?.rank ?? awayTeam?.team?.rank ?? null,
+    homeRank: homeTeam?.curatedRank?.current ?? homeTeam?.rank ?? homeTeam?.team?.rank ?? null
   };
 }
 
-router.get("/", async (req, res) => {
+async function fetchScoreboard(config, date, groupId = null) {
+  let url = `https://site.api.espn.com/apis/site/v2/sports/${config.sport}/${config.league}/scoreboard?dates=${date}`;
+  if (groupId) url += `&groups=${groupId}&limit=500`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`ESPN request failed: ${response.status}`);
+  return response.json();
+}
+
+async function fetchCollegeFootballRankings(date) {
+  const seasonMatch = String(date || "").match(/^(\d{4})/);
+  const season = seasonMatch ? seasonMatch[1] : String(new Date().getUTCFullYear());
+  const url = `https://site.api.espn.com/apis/site/v2/sports/football/college-football/rankings?season=${encodeURIComponent(season)}`;
+  const response = await fetch(url, { headers: { accept: "application/json", "user-agent": "WTG/0.1H8i" } });
+  if (!response.ok) throw new Error(`ESPN rankings request failed: ${response.status}`);
+  return response.json();
+}
+
+function normalizeRankTeamName(value) {
+  return String(value || "").toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function getApTop25Map(data) {
+  const rankings = Array.isArray(data?.rankings) ? data.rankings : [];
+  const apPoll = rankings.find((poll) => {
+    const text = String(poll?.name || poll?.shortName || poll?.headline || poll?.type || "").toLowerCase();
+    return text.includes("ap top 25") || text.includes("associated press") || /^ap\b/.test(text);
+  });
+  const byId = new Map();
+  const byName = new Map();
+  for (const item of apPoll?.ranks ?? []) {
+    const rank = Number(item?.current ?? item?.rank ?? item?.currentRank ?? item?.ranking);
+    if (!Number.isFinite(rank) || rank < 1 || rank > 25) continue;
+    const team = item?.team ?? {};
+    const id = team?.id != null ? String(team.id) : item?.teamId != null ? String(item.teamId) : null;
+    if (id) byId.set(id, rank);
+    for (const name of [team?.displayName, team?.shortDisplayName, team?.name, team?.location, team?.abbreviation, item?.teamName, item?.name]) {
+      const normalized = normalizeRankTeamName(name);
+      if (normalized) byName.set(normalized, rank);
+    }
+  }
+  return {
+    byId, byName,
+    pollName: apPoll?.name || apPoll?.shortName || "AP Top 25",
+    rankedTeamCount: byId.size || byName.size,
+    week: data?.latestWeek?.number ?? data?.week?.number ?? apPoll?.week ?? null,
+    season: data?.latestSeason?.year ?? data?.season?.year ?? null,
+    healthy: Boolean(apPoll && (byId.size || byName.size))
+  };
+}
+
+function rankForGameTeam(game, side, rankMap) {
+  const id = game?.[`${side}TeamId`];
+  if (id != null && rankMap.byId.has(String(id))) return rankMap.byId.get(String(id));
+  const exact = normalizeRankTeamName(game?.[side]);
+  if (exact && rankMap.byName.has(exact)) return rankMap.byName.get(exact);
+  if (exact.length >= 5) {
+    for (const [name, rank] of rankMap.byName.entries()) {
+      if (name.length >= 5 && (exact === name || exact.includes(name) || name.includes(exact))) return rank;
+    }
+  }
+  return null;
+}
+
+function applyCollegeFootballRankings(games, rankMap) {
+  return games.map((game) => ({
+    ...game,
+    awayRank: rankForGameTeam(game, "away", rankMap) ?? game?.awayRank ?? null,
+    homeRank: rankForGameTeam(game, "home", rankMap) ?? game?.homeRank ?? null,
+    rankingPoll: rankMap.pollName,
+    rankingWeek: rankMap.week,
+    rankingSeason: rankMap.season,
+    rankingHealthy: rankMap.healthy
+  }));
+}
+
+function dedupeGames(games) {
+  const unique = new Map();
+  for (const game of games) {
+    const key = game.id ?? `${game.away}|${game.home}|${game.startTime}`;
+    if (!unique.has(key)) { unique.set(key, game); continue; }
+    const existing = unique.get(key);
+    const existingPriority = NCAA_DIVISION_PRIORITY[existing?.division] ?? 99;
+    const incomingPriority = NCAA_DIVISION_PRIORITY[game?.division] ?? 99;
+    if (incomingPriority < existingPriority) unique.set(key, game);
+  }
+  return [...unique.values()].sort((a, b) => new Date(a.startTime ?? 0).getTime() - new Date(b.startTime ?? 0).getTime());
+}
+
+async function getBaseGames(sportKey, config, date) {
+  if (sportKey === "otherfootball") {
+    const results = await Promise.allSettled(
+      config.leagues.map(async (leagueConfig) => {
+        const data = await fetchScoreboard({ sport: config.sport, league: leagueConfig.league }, date);
+        return (data.events ?? []).map((event) => normalizeEvent(event, config.label, { league: leagueConfig.label }));
+      })
+    );
+    return dedupeGames(results.filter((result) => result.status === "fulfilled").flatMap((result) => result.value));
+  }
+
+  if (sportKey !== "ncaaf") {
+    const data = await fetchScoreboard(config, date);
+    return (data.events ?? []).map((event) => normalizeEvent(event, config.label));
+  }
+
+  const results = await Promise.all(NCAA_GROUPS.map(async (group) => {
+    const data = await fetchScoreboard(config, date, group.id);
+    return (data.events ?? []).map((event) => normalizeEvent(event, config.label, { division: group.division }));
+  }));
+  const games = dedupeGames(results.flat());
   try {
-    const sportKey = String(req.query.sport || "nfl").toLowerCase();
-    const date = String(req.query.date || new Date().toISOString().slice(0, 10));
-    const provider = String(req.query.provider || "directv").toLowerCase();
-    const config = SPORTS[sportKey];
-
-    if (!config) {
-      return res.status(400).json({ error: `Unsupported sport: ${sportKey}` });
-    }
-
-    const leagueConfigs = config.leagues || [config];
-    const events = [];
-
-    for (const leagueConfig of leagueConfigs) {
-      const data = await fetchScoreboard(config.sport, leagueConfig.league, date);
-      for (const event of data?.events || []) {
-        const normalized = normalizeEvent(event, sportKey, leagueConfig);
-
-        if (sportKey === "mlb" && provider === "directv") {
-          try {
-            normalized.directvGuide = await lookupDirectvGame({
-              date,
-              away: normalized.away,
-              home: normalized.home
-            });
-          } catch (error) {
-            console.warn("DIRECTV guide lookup failed:", error?.message || error);
-          }
-        }
-
-        events.push(resolveEvent(normalized, { provider }));
-      }
-    }
-
-    res.json({ sport: sportKey, date, count: events.length, events });
+    const rankingData = await fetchCollegeFootballRankings(date);
+    const rankMap = getApTop25Map(rankingData);
+    if (!rankMap.healthy) return games.map((game) => ({ ...game, rankingPoll: rankMap.pollName, rankingWeek: rankMap.week, rankingSeason: rankMap.season, rankingHealthy: false }));
+    return applyCollegeFootballRankings(games, rankMap);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error?.message || "Failed to resolve games" });
+    console.error("College football rankings lookup error:", error);
+    return games;
+  }
+}
+
+async function addDirectvGuideData(game, sportKey) {
+  if (sportKey !== "mlb") return game;
+  try {
+    const directvGuide = await lookupDirectvGame({ sport: "mlb", away: game.away, home: game.home, zip: "15220" });
+    return { ...game, directvGuide };
+  } catch (error) {
+    console.error("DIRECTV game lookup error:", error);
+    return { ...game, directvGuide: null };
+  }
+}
+
+function normalizeSearchValue(value) {
+  return String(value || "").toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+async function fetchLeagueTeams(config) {
+  if (Array.isArray(config?.leagues)) {
+    const results = await Promise.allSettled(config.leagues.map((league) => fetchLeagueTeams({ sport: config.sport, league: league.league })));
+    return { sports: results.filter((result) => result.status === "fulfilled").map((result) => result.value) };
+  }
+  const url = `https://site.api.espn.com/apis/site/v2/sports/${config.sport}/${config.league}/teams?limit=2000`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`ESPN teams request failed: ${response.status}`);
+  return response.json();
+}
+
+function extractTeams(data) {
+  const output = [];
+  const walk = (value) => {
+    if (!value || typeof value !== "object") return;
+    if (Array.isArray(value)) { value.forEach(walk); return; }
+    const team = value?.team;
+    if (team && typeof team === "object" && team.id != null && (team.displayName || team.name)) output.push(team);
+    for (const child of Object.values(value)) if (child && typeof child === "object") walk(child);
+  };
+  walk(data);
+  const seen = new Set();
+  return output.filter((team) => {
+    const id = String(team?.id ?? "");
+    if (!id || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+}
+
+function teamSearchText(team) {
+  return normalizeSearchValue([team?.displayName, team?.shortDisplayName, team?.name, team?.nickname, team?.location, team?.abbreviation].filter(Boolean).join(" "));
+}
+
+function teamMatchesNextSearch(team, query) {
+  const normalized = normalizeSearchValue(query);
+  if (!normalized) return false;
+  const haystack = teamSearchText(team);
+  return normalized.split(" ").filter(Boolean).every((term) => haystack.includes(term));
+}
+
+async function fetchTeamSchedule(config, teamId, season) {
+  const url = `https://site.api.espn.com/apis/site/v2/sports/${config.sport}/${config.league}/teams/${encodeURIComponent(teamId)}/schedule?season=${encodeURIComponent(season)}`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`ESPN team schedule request failed: ${response.status}`);
+  return response.json();
+}
+
+function scheduleEvents(data) {
+  if (Array.isArray(data?.events)) return data.events;
+  if (Array.isArray(data?.schedule)) return data.schedule;
+  return [];
+}
+
+async function nextGameForTeam(sportKey, config, team, providerKey) {
+  if (Array.isArray(config?.leagues)) return null;
+  const now = Date.now();
+  const thisYear = new Date().getUTCFullYear();
+  const results = await Promise.allSettled([thisYear, thisYear + 1].map((season) => fetchTeamSchedule(config, team.id, season)));
+  const events = results.filter((result) => result.status === "fulfilled").flatMap((result) => scheduleEvents(result.value));
+  const upcoming = events.filter((event) => {
+    const when = new Date(event?.date || 0).getTime();
+    const status = String(event?.status?.type?.state || event?.status?.type?.name || event?.status?.type?.description || "").toLowerCase();
+    return Number.isFinite(when) && when >= now && !status.includes("final") && !status.includes("post");
+  }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  if (!upcoming.length) return null;
+  let game = normalizeEvent(upcoming[0], config.label, {});
+  game = { ...game, _sportKey: sportKey, searchTeamId: String(team.id), searchTeamName: team.displayName || team.name || null };
+  game = resolveGame(game, providerKey);
+  return addDirectvGuideData(game, sportKey);
+}
+
+router.get("/next", async (req, res) => {
+  const query = String(req.query.q || "").trim();
+  const providerKey = String(req.query.provider || "directv").toLowerCase().trim();
+  if (!query) return res.json({ status: "ok", query, count: 0, games: [] });
+  try {
+    const leagueResults = await Promise.allSettled(Object.entries(SPORTS).map(async ([sportKey, config]) => {
+      if (Array.isArray(config?.leagues)) return [];
+      const teamData = await fetchLeagueTeams(config);
+      const teams = extractTeams(teamData).filter((team) => teamMatchesNextSearch(team, query)).slice(0, 8);
+      const games = await Promise.all(teams.map((team) => nextGameForTeam(sportKey, config, team, providerKey)));
+      return games.filter(Boolean);
+    }));
+    const allGames = leagueResults.filter((result) => result.status === "fulfilled").flatMap((result) => result.value).filter(Boolean);
+    const deduped = [];
+    const seen = new Set();
+    for (const game of allGames.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())) {
+      const key = `${game._sportKey}:${game.searchTeamId}:${game.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      deduped.push(game);
+    }
+    return res.json({ status: "ok", query, count: deduped.length, games: deduped });
+  } catch (error) {
+    console.error("Next-game search error:", error);
+    return res.status(500).json({ status: "error", query, count: 0, games: [] });
+  }
+});
+
+router.get("/", async (req, res) => {
+  const sportKey = String(req.query.sport ?? "mlb").toLowerCase().trim();
+  const config = SPORTS[sportKey];
+  if (!config) return res.status(400).json({ status: "error", message: "Unsupported sport" });
+  const date = normalizeDate(req.query.date);
+  const providerKey = String(req.query.provider ?? "directv").toLowerCase().trim();
+  try {
+    const baseGames = await getBaseGames(sportKey, config, date);
+    const resolvedGames = baseGames.map((game) => resolveGame(game, providerKey));
+    const games = await Promise.all(resolvedGames.map((game) => addDirectvGuideData(game, sportKey)));
+    return res.json({
+      status: "ok", sport: sportKey, date, provider: providerKey, count: games.length,
+      leagues: sportKey === "otherfootball" ? config.leagues.map((league) => league.label) : undefined,
+      divisions: sportKey === "ncaaf" ? ["FBS", "FCS", "DII", "DIII"] : undefined,
+      rankingSource: sportKey === "ncaaf" ? (games.find((g) => g?.rankingPoll)?.rankingPoll || null) : undefined,
+      rankingWeek: sportKey === "ncaaf" ? (games.find((g) => g?.rankingWeek != null)?.rankingWeek ?? null) : undefined,
+      rankingSeason: sportKey === "ncaaf" ? (games.find((g) => g?.rankingSeason != null)?.rankingSeason ?? null) : undefined,
+      rankingHealthy: sportKey === "ncaaf" ? Boolean(games.find((g) => g?.rankingHealthy === true)) : undefined,
+      rankedTeamCount: sportKey === "ncaaf" ? new Set(games.flatMap((g) => [Number(g?.awayRank) >= 1 && Number(g?.awayRank) <= 25 ? String(g?.awayTeamId || g?.away || "") : null, Number(g?.homeRank) >= 1 && Number(g?.homeRank) <= 25 ? String(g?.homeTeamId || g?.home || "") : null]).filter(Boolean)).size : undefined,
+      games
+    });
+  } catch (error) {
+    console.error("Resolve route error:", error);
+    return res.status(500).json({ status: "error", message: "Could not resolve games" });
   }
 });
 
