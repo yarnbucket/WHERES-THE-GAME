@@ -4,7 +4,7 @@ import { resolveGame } from "../logic/resolver.js";
 const router = express.Router();
 
 // Active pro football leagues outside the NFL that ESPN exposes
-// through the same scoreboard API used by the rest of WTG.
+// through the same public API family used by the rest of WTG.
 const OTHER_FOOTBALL_LEAGUES = [
   {
     key: "cfl",
@@ -33,6 +33,19 @@ function normalizeDate(value) {
     .trim();
 }
 
+function dateKeyFromEvent(event) {
+  const raw = event?.date;
+  if (!raw) return null;
+
+  const date = new Date(raw);
+  if (!Number.isFinite(date.getTime())) return null;
+
+  return date
+    .toISOString()
+    .slice(0, 10)
+    .replaceAll("-", "");
+}
+
 function getBroadcast(competition) {
   const names = (competition?.broadcasts ?? [])
     .flatMap((broadcast) => broadcast?.names ?? [])
@@ -41,7 +54,7 @@ function getBroadcast(competition) {
   return [...new Set(names)].join(", ");
 }
 
-function normalizeEvent(event, config) {
+function normalizeEvent(event, config, metadata = {}) {
   const competition = event?.competitions?.[0];
   const competitors = competition?.competitors ?? [];
 
@@ -58,6 +71,7 @@ function normalizeEvent(event, config) {
     sport: config.label,
     league: config.key,
     leagueLabel: config.label,
+    source: metadata.source ?? "espn-scoreboard",
     name: event?.name ?? null,
     away:
       awayTeam?.team?.displayName ??
@@ -86,30 +100,164 @@ function normalizeEvent(event, config) {
   };
 }
 
-async function fetchLeagueGames(config, date) {
-  const url =
-    `https://site.api.espn.com/apis/site/v2/sports/` +
-    `${config.sport}/${config.league}/scoreboard` +
-    `?dates=${date}&limit=100`;
-
+async function fetchJson(url, label) {
   const response = await fetch(url, {
     headers: {
-      "accept": "application/json",
+      accept: "application/json",
       "user-agent": "WTG/other-football"
     }
   });
 
   if (!response.ok) {
-    throw new Error(
-      `${config.label} ESPN request failed: ${response.status}`
-    );
+    throw new Error(`${label} request failed: ${response.status}`);
   }
 
-  const data = await response.json();
+  return response.json();
+}
+
+async function fetchScoreboardGames(config, date) {
+  const url =
+    `https://site.api.espn.com/apis/site/v2/sports/` +
+    `${config.sport}/${config.league}/scoreboard` +
+    `?dates=${date}&limit=100`;
+
+  const data = await fetchJson(
+    url,
+    `${config.label} ESPN scoreboard`
+  );
 
   return (data?.events ?? []).map(
-    (event) => normalizeEvent(event, config)
+    (event) => normalizeEvent(
+      event,
+      config,
+      { source: "espn-scoreboard" }
+    )
   );
+}
+
+function extractTeams(data) {
+  const output = [];
+  const seen = new Set();
+
+  const walk = (value) => {
+    if (!value || typeof value !== "object") return;
+
+    if (Array.isArray(value)) {
+      value.forEach(walk);
+      return;
+    }
+
+    const team = value?.team;
+    if (
+      team &&
+      team.id != null &&
+      (team.displayName || team.name)
+    ) {
+      const id = String(team.id);
+      if (!seen.has(id)) {
+        seen.add(id);
+        output.push(team);
+      }
+    }
+
+    for (const child of Object.values(value)) {
+      if (child && typeof child === "object") {
+        walk(child);
+      }
+    }
+  };
+
+  walk(data);
+  return output;
+}
+
+function scheduleEvents(data) {
+  if (Array.isArray(data?.events)) return data.events;
+  if (Array.isArray(data?.schedule)) return data.schedule;
+  return [];
+}
+
+async function fetchTeamScheduleGames(config, date) {
+  const season = String(date).slice(0, 4);
+
+  const teamsUrl =
+    `https://site.api.espn.com/apis/site/v2/sports/` +
+    `${config.sport}/${config.league}/teams?limit=100`;
+
+  const teamsData = await fetchJson(
+    teamsUrl,
+    `${config.label} ESPN teams`
+  );
+
+  const teams = extractTeams(teamsData);
+
+  if (!teams.length) {
+    throw new Error(`${config.label} ESPN teams returned no teams`);
+  }
+
+  const schedules = await Promise.allSettled(
+    teams.map(async (team) => {
+      const scheduleUrl =
+        `https://site.api.espn.com/apis/site/v2/sports/` +
+        `${config.sport}/${config.league}/teams/` +
+        `${encodeURIComponent(team.id)}/schedule` +
+        `?season=${encodeURIComponent(season)}`;
+
+      return fetchJson(
+        scheduleUrl,
+        `${config.label} ESPN team schedule`
+      );
+    })
+  );
+
+  const events = schedules
+    .filter((result) => result.status === "fulfilled")
+    .flatMap((result) => scheduleEvents(result.value))
+    .filter((event) => dateKeyFromEvent(event) === date)
+    .map((event) => normalizeEvent(
+      event,
+      config,
+      { source: "espn-team-schedule" }
+    ));
+
+  return dedupeGames(events);
+}
+
+async function fetchLeagueGames(config, date) {
+  const scoreboardGames = await fetchScoreboardGames(
+    config,
+    date
+  );
+
+  if (scoreboardGames.length) {
+    return {
+      games: scoreboardGames,
+      source: "espn-scoreboard",
+      fallbackUsed: false
+    };
+  }
+
+  // ESPN's CFL date scoreboard can return zero future events even when
+  // the season schedule is already published. The team schedule endpoint
+  // is a better source for those future dates, so use it as a fallback.
+  if (config.key === "cfl") {
+    const scheduleGames = await fetchTeamScheduleGames(
+      config,
+      date
+    );
+
+    return {
+      games: scheduleGames,
+      source: "espn-team-schedule",
+      fallbackUsed: true
+    };
+  }
+
+  return {
+    games: [],
+    source: "espn-scoreboard",
+    fallbackUsed: false
+  };
 }
 
 function dedupeGames(games) {
@@ -165,8 +313,16 @@ router.get("/", async (req, res, next) => {
         healthy: result?.status === "fulfilled",
         count:
           result?.status === "fulfilled"
-            ? result.value.length
+            ? result.value.games.length
             : 0,
+        source:
+          result?.status === "fulfilled"
+            ? result.value.source
+            : null,
+        fallbackUsed:
+          result?.status === "fulfilled"
+            ? Boolean(result.value.fallbackUsed)
+            : false,
         error:
           result?.status === "rejected"
             ? String(result.reason?.message || result.reason || "Unknown error")
@@ -177,7 +333,7 @@ router.get("/", async (req, res, next) => {
 
   const successfulGames = results
     .filter((result) => result.status === "fulfilled")
-    .flatMap((result) => result.value);
+    .flatMap((result) => result.value.games);
 
   // A failure in one league should not hide games from the other league.
   // Only return an error when every configured source failed.
