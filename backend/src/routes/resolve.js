@@ -68,12 +68,15 @@ function broadcastNamesFromList(broadcasts) {
     broadcast?.name,
     broadcast?.shortName,
     broadcast?.displayName,
+    broadcast?.callLetters,
     broadcast?.media?.name,
     broadcast?.media?.shortName,
     broadcast?.media?.displayName,
+    broadcast?.media?.callLetters,
     broadcast?.network?.name,
     broadcast?.network?.shortName,
-    broadcast?.network?.displayName
+    broadcast?.network?.displayName,
+    broadcast?.network?.callLetters
   ]));
 }
 
@@ -94,20 +97,87 @@ function getGolfEmbeddedBroadcast(event) {
   return names.join(", ");
 }
 
-function golfCoreBroadcastNames(data) {
+function golfBroadcastNamesFromObject(value) {
+  if (!value || typeof value !== "object") return [];
+  return uniqueNames([
+    ...(value?.names ?? []),
+    value?.name,
+    value?.shortName,
+    value?.displayName,
+    value?.callLetters,
+    value?.network,
+    value?.media?.name,
+    value?.media?.shortName,
+    value?.media?.displayName,
+    value?.media?.callLetters,
+    value?.network?.name,
+    value?.network?.shortName,
+    value?.network?.displayName,
+    value?.network?.callLetters
+  ]).filter((name) => !/^(national|regional|international|domestic|english|spanish)$/i.test(name));
+}
+
+function normalizeEspnRefUrl(value) {
+  const url = String(value || "").trim().replace("sports.core.api.espn.pvt", "sports.core.api.espn.com");
+  if (!/^https:\/\/(sports\.core\.api\.espn\.com|site\.api\.espn\.com|site\.web\.api\.espn\.com)\//i.test(url)) return null;
+  return url;
+}
+
+async function fetchEspnJson(url) {
+  const safeUrl = normalizeEspnRefUrl(url);
+  if (!safeUrl) return null;
+  const response = await fetch(safeUrl, { headers: { accept: "application/json", "user-agent": "WTG/0.1H8k" } });
+  if (!response.ok) return null;
+  return response.json();
+}
+
+async function golfCoreBroadcastNames(data) {
   const items = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
-  return uniqueNames(items.flatMap((item) => [
-    ...(item?.names ?? []),
-    item?.name,
-    item?.shortName,
-    item?.displayName,
-    item?.media?.name,
-    item?.media?.shortName,
-    item?.media?.displayName,
-    item?.network?.name,
-    item?.network?.shortName,
-    item?.network?.displayName
-  ])).filter((name) => !/^(national|regional|international|domestic|english|spanish)$/i.test(name));
+  const names = items.flatMap(golfBroadcastNamesFromObject);
+
+  const resolved = await Promise.allSettled(items.map(async (item) => {
+    const itemRef = normalizeEspnRefUrl(item?.$ref);
+    const broadcast = itemRef ? await fetchEspnJson(itemRef) : item;
+    if (!broadcast) return [];
+
+    const result = golfBroadcastNamesFromObject(broadcast);
+    const mediaRef = normalizeEspnRefUrl(broadcast?.media?.$ref);
+    if (mediaRef) {
+      const media = await fetchEspnJson(mediaRef);
+      if (media) result.push(...golfBroadcastNamesFromObject(media));
+    }
+    const networkRef = normalizeEspnRefUrl(broadcast?.network?.$ref);
+    if (networkRef) {
+      const network = await fetchEspnJson(networkRef);
+      if (network) result.push(...golfBroadcastNamesFromObject(network));
+    }
+    return result;
+  }));
+
+  for (const result of resolved) if (result.status === "fulfilled") names.push(...result.value);
+  return uniqueNames(names).filter((name) => !/^(national|regional|international|domestic|english|spanish)$/i.test(name));
+}
+
+function golfNetworksFromHtml(html) {
+  const text = String(html || "");
+  const known = [
+    "Golf Channel", "CBS Sports Network", "NBC", "CBS", "ABC", "USA",
+    "FS1", "FS2", "TNT", "TBS", "Peacock", "Paramount+"
+  ];
+  return known.filter((network) => text.toLowerCase().includes(network.toLowerCase()));
+}
+
+async function fetchGolfLeaderboardBroadcast(eventId) {
+  try {
+    const url = `https://www.espn.com/golf/leaderboard/_/tournamentId/${encodeURIComponent(eventId)}`;
+    const response = await fetch(url, { headers: { accept: "text/html", "user-agent": "Mozilla/5.0 WTG/0.1H8k" } });
+    if (!response.ok) return "";
+    const html = await response.text();
+    return uniqueNames(golfNetworksFromHtml(html)).join(", ");
+  } catch (error) {
+    console.error("Golf leaderboard broadcast lookup error:", error);
+    return "";
+  }
 }
 
 async function fetchGolfBroadcast(event, league) {
@@ -141,14 +211,14 @@ async function fetchGolfBroadcast(event, league) {
     const coreResponse = await fetch(coreUrl, { headers: { accept: "application/json", "user-agent": "WTG/0.1H8k" } });
     if (coreResponse.ok) {
       const core = await coreResponse.json();
-      const names = golfCoreBroadcastNames(core);
+      const names = await golfCoreBroadcastNames(core);
       if (names.length) return names.join(", ");
     }
   } catch (error) {
     console.error("Golf core broadcast lookup error:", error);
   }
 
-  return "";
+  return fetchGolfLeaderboardBroadcast(eventId);
 }
 
 function getConferenceTag(competitor) {
