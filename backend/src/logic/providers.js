@@ -28,6 +28,8 @@ export const PROVIDERS = {
       USA: "242",
 
       "CBS Sports Network": "221",
+      "Golf Channel": "218",
+      GOLF: "218",
 
       BTN: "610",
       "Big Ten Network": "610",
@@ -154,7 +156,7 @@ export const PROVIDERS = {
 
       nhl: {
         name: "NHL Center Ice",
-        channelRange: null,
+        channelRange: "770-793",
         streaming: null,
         blackoutRules: true
       }
@@ -180,6 +182,7 @@ export const PROVIDERS = {
       "NHL Network": null,
 
       "CBS Sports Network": null,
+      "Golf Channel": null,
 
       BTN: null,
       "Big Ten Network": null,
