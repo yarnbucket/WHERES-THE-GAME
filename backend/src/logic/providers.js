@@ -28,6 +28,7 @@ export const PROVIDERS = {
       USA: "242",
 
       "CBS Sports Network": "221",
+      "Tennis Channel": "217",
       "Golf Channel": "218",
       "Golf Chnl": "218",
       GOLF: "218",
@@ -183,6 +184,7 @@ export const PROVIDERS = {
       "NHL Network": null,
 
       "CBS Sports Network": null,
+      "Tennis Channel": null,
       "Golf Channel": null,
       "Golf Chnl": null,
 
