@@ -2,68 +2,38 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>WTG Resolve Diagnostic</title>
 <style>
-:root{--bg:#07111f;--card:#101d2f;--line:#263a54;--ink:#f4f8ff;--muted:#9db0c8;--blue:#4aa3ff;--green:#43d17a;--red:#ff6b78;--gold:#f6c453}
-*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#07111f,#0b1625);color:var(--ink);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}.app{max-width:920px;margin:auto;padding:18px 12px 60px}h1{margin:0;font-size:28px}p{color:var(--muted)}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0}.controls{display:grid;grid-template-columns:1fr 1fr auto;gap:8px}.controls select,.controls input,.controls button{height:44px;border-radius:10px;border:1px solid var(--line);font:inherit}.controls select,.controls input{background:#0b1727;color:var(--ink);padding:0 10px}.controls button{background:var(--blue);color:#06111f;font-weight:900;padding:0 16px;cursor:pointer}.status{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.pill{border:1px solid var(--line);border-radius:999px;padding:7px 10px;font-size:12px;font-weight:900}.ok{color:var(--green)}.bad{color:var(--red)}.warn{color:var(--gold)}.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}.metric{background:#0b1727;border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}.metric b{font-size:24px;display:block}.metric span{font-size:10px;color:var(--muted);font-weight:900}.games{display:grid;gap:7px}.game{background:#0b1727;border:1px solid var(--line);border-radius:10px;padding:10px}.game strong{display:block}.meta{color:var(--muted);font-size:12px;margin-top:4px}.rank{color:var(--gold);font-weight:900}.raw{white-space:pre-wrap;word-break:break-word;max-height:340px;overflow:auto;background:#06101c;border-radius:10px;padding:10px;color:#b8cae0;font:12px ui-monospace,Consolas,monospace}.small{font-size:12px;color:var(--muted)}
-@media(max-width:700px){.controls{grid-template-columns:1fr}.grid{grid-template-columns:repeat(3,1fr)}}
-</style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#10213d;background:#f4f7fb}*{box-sizing:border-box}body{margin:0}.wrap{max-width:900px;margin:auto;padding:18px}.card{background:#fff;border:1px solid #dbe4ef;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 6px 20px rgba(30,60,100,.07)}h1{margin:0 0 4px;font-size:25px}h2{margin:0 0 10px;font-size:18px}.muted{color:#65758d;font-size:13px}.controls{display:grid;grid-template-columns:1fr 1fr auto;gap:8px}.controls input,.controls select,.controls button{height:42px;border-radius:10px;border:1px solid #c8d4e3;padding:0 10px;font:inherit}.controls button{background:#1769e8;color:#fff;border:0;font-weight:800}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.stat{border:1px solid #dce5f0;border-radius:12px;padding:11px;text-align:center}.stat b{display:block;font-size:25px}.stat small{font-weight:800;color:#66758c}.pass{background:#eaf8ef;color:#166534}.fail{background:#fff0f1;color:#a52b32}.warn{background:#fff8df;color:#7b5a00}.table{width:100%;border-collapse:collapse;font-size:13px}.table th,.table td{padding:9px;border-bottom:1px solid #e6edf5;text-align:left}.table th{font-size:11px;color:#66758c}.ok{color:#177245;font-weight:900}.bad{color:#b12b34;font-weight:900}.code{white-space:pre-wrap;word-break:break-word;background:#0f172a;color:#d8e4f5;border-radius:12px;padding:12px;max-height:300px;overflow:auto;font:12px ui-monospace,SFMono-Regular,Consolas,monospace}.games{display:grid;gap:6px}.game{padding:8px 10px;border:1px solid #dce5f0;border-radius:10px;font-size:12px}.game b{display:block}.note{font-size:12px;line-height:1.45;color:#596a82}@media(max-width:650px){.controls{grid-template-columns:1fr}.grid{grid-template-columns:repeat(2,1fr)}.table{font-size:11px}.table th,.table td{padding:7px 4px}}</style>
 </head>
-<body>
-<div class="app">
-<h1>WTG RESOLVE DIAGNOSTIC</h1>
-<p>Tests the same live Render <code>/resolve</code> endpoint used by Where's the Game. No app data is changed.</p>
-<section class="card">
-  <div class="controls">
-    <select id="sport"><option value="ncaaf">NCAAF</option><option value="nfl">NFL</option><option value="mlb">MLB</option><option value="nhl">NHL</option><option value="nba">NBA</option><option value="ncaab">NCAAB</option></select>
-    <input id="date" type="date" value="2026-09-12">
-    <button id="run">RUN TEST</button>
-  </div>
-  <div class="status" id="status"><span class="pill warn">READY</span></div>
-  <div class="small" id="url" style="margin-top:10px"></div>
-</section>
-<section class="card">
-  <div class="grid">
-    <div class="metric"><b id="total">—</b><span>TOTAL</span></div>
-    <div class="metric"><b id="top25">—</b><span>TOP 25 GAMES</span></div>
-    <div class="metric"><b id="fbs">—</b><span>FBS</span></div>
-    <div class="metric"><b id="fcs">—</b><span>FCS</span></div>
-    <div class="metric"><b id="dii">—</b><span>DII</span></div>
-    <div class="metric"><b id="diii">—</b><span>DIII</span></div>
-  </div>
-</section>
-<section class="card"><h2>Returned games</h2><div class="games" id="games"><div class="small">Run a test to view results.</div></div></section>
-<section class="card"><h2>Ranking health</h2><div id="ranking" class="small">Run NCAAF to inspect ranking metadata.</div></section>
-<section class="card"><details><summary><b>Raw /resolve JSON</b></summary><pre class="raw" id="raw"></pre></details></section>
+<body><div class="wrap">
+<h1>WTG Resolve Diagnostic</h1><div class="muted">Direct ESPN feed vs your live Render /resolve endpoint</div>
+<div class="card controls"><input id="date" type="date" value="2026-09-12"><select id="provider"><option value="directv">DirecTV</option></select><button id="run">RUN TEST</button></div>
+<div class="card"><h2>Division comparison</h2><div class="grid" id="stats"></div><div id="status" class="muted" style="margin-top:10px">Ready.</div></div>
+<div class="card"><h2>ESPN direct vs Render</h2><table class="table"><thead><tr><th>DIVISION</th><th>ESPN DIRECT</th><th>RENDER /RESOLVE</th><th>RESULT</th></tr></thead><tbody id="rows"></tbody></table></div>
+<div class="card"><h2>Render sample games</h2><div id="games" class="games"></div></div>
+<div class="card"><h2>Raw /resolve response</h2><div id="raw" class="code">Run the test.</div></div>
+<div class="card note"><b>How to read this:</b> If ESPN DIRECT has games but RENDER /RESOLVE shows 0, the bug is in our backend merge/deployment. If both show 0, the ESPN group ID/request needs repair. Cross-division games can legitimately appear in more than one ESPN group, so this test counts source-feed events before deduping.</div>
 </div>
 <script>
-const API_BASE='https://wheres-the-game.onrender.com';
-const $=id=>document.getElementById(id);
-function esc(v=''){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function normalizeDivision(v){const s=String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'');if(s==='FBS'||s==='1A'||s==='DIA')return'FBS';if(s==='FCS'||s==='1AA'||s==='DIAA')return'FCS';if(s==='DII'||s==='D2'||s==='DIVISIONII')return'DII';if(s==='DIII'||s==='D3'||s==='DIVISIONIII')return'DIII';return String(v||'UNKNOWN').toUpperCase()}
-function rank(v){const n=Number(v);return Number.isFinite(n)&&n>=1&&n<=25?n:null}
-function gamesFrom(data){if(Array.isArray(data))return data;if(Array.isArray(data?.games))return data.games;if(Array.isArray(data?.events))return data.events;if(Array.isArray(data?.results))return data.results;return[]}
-function setStatus(text,cls){$('status').innerHTML=`<span class="pill ${cls}">${esc(text)}</span>`}
-async function run(){
- const sport=$('sport').value;const date=$('date').value.replaceAll('-','');
- const url=`${API_BASE}/resolve?sport=${encodeURIComponent(sport)}&date=${encodeURIComponent(date)}&provider=directv`;
- $('url').textContent=url;setStatus('REQUESTING LIVE /resolve…','warn');$('games').innerHTML='<div class="small">Loading…</div>';
- try{
-   const started=performance.now();const res=await fetch(url,{cache:'no-store'});const ms=Math.round(performance.now()-started);const text=await res.text();let data;
-   try{data=JSON.parse(text)}catch{throw new Error(`HTTP ${res.status}: response was not valid JSON`)}
-   $('raw').textContent=JSON.stringify(data,null,2);
-   if(!res.ok)throw new Error(`HTTP ${res.status} ${res.statusText}`);
-   const games=gamesFrom(data);setStatus(`HTTP ${res.status} OK • ${ms} ms`,'ok');
-   const counts={FBS:0,FCS:0,DII:0,DIII:0};let top25=0;
-   for(const g of games){const d=normalizeDivision(g.division||g.subdivision||g.ncaaDivision);if(counts[d]!=null)counts[d]++;if(rank(g.awayRank)||rank(g.homeRank))top25++}
-   $('total').textContent=games.length;$('top25').textContent=top25;$('fbs').textContent=counts.FBS;$('fcs').textContent=counts.FCS;$('dii').textContent=counts.DII;$('diii').textContent=counts.DIII;
-   $('games').innerHTML=games.length?games.map(g=>{const ar=rank(g.awayRank),hr=rank(g.homeRank);const away=`${ar?`<span class="rank">#${ar}</span> `:''}${esc(g.away||'Away')}`;const home=`${hr?`<span class="rank">#${hr}</span> `:''}${esc(g.home||'Home')}`;const div=esc(normalizeDivision(g.division||g.subdivision||g.ncaaDivision));const net=esc(g.network||g.broadcast||'No network');const time=g.startTime?new Date(g.startTime).toLocaleString():'';return `<div class="game"><strong>${away} @ ${home}</strong><div class="meta">${div} • ${esc(time)} • ${net}</div></div>`}).join(''):'<div class="small">Endpoint returned zero games.</div>';
-   const sample=games.find(g=>g.rankingPoll||g.rankingHealthy!=null||g.rankingWeek!=null);const topMeta=data?.rankingSource||data?.rankingPoll||sample?.rankingPoll||'not supplied';const healthy=data?.rankingHealthy??sample?.rankingHealthy;const rankedCount=data?.rankedTeamCount??null;
-   $('ranking').innerHTML=`Poll/source: <b>${esc(topMeta)}</b><br>Healthy: <b>${esc(healthy==null?'not supplied':healthy)}</b><br>Ranked-team count: <b>${esc(rankedCount==null?'not supplied':rankedCount)}</b><br>Top-25 games detected in returned schedule: <b>${top25}</b>`;
- }catch(err){setStatus(`FAILED • ${err.message}`,'bad');$('raw').textContent=String(err.stack||err);$('games').innerHTML=`<div class="small">${esc(err.message)}</div>`;['total','top25','fbs','fcs','dii','diii'].forEach(id=>$(id).textContent='—')}
+const API='https://wheres-the-game.onrender.com';
+const GROUPS=[{name:'FBS',id:'80'},{name:'FCS',id:'81'},{name:'DII',id:'57'},{name:'DIII',id:'58'}];
+const $=x=>document.getElementById(x);
+function ymd(v){return String(v||'').replaceAll('-','')}
+function eventsFromResolve(data){if(Array.isArray(data))return data;if(Array.isArray(data?.games))return data.games;if(Array.isArray(data?.events))return data.events;if(Array.isArray(data?.results))return data.results;return []}
+function divKey(g){return String(g?.division||g?.ncaaDivision||g?.subdivision||'').toUpperCase().replace(/[^A-Z0-9]/g,'')}
+function countDivision(games,name){const target=name.replace(/[^A-Z0-9]/g,'');return games.filter(g=>divKey(g)===target).length}
+function title(g){return `${g?.away||g?.awayTeam||'Away'} @ ${g?.home||g?.homeTeam||'Home'}`}
+async function directGroup(date,g){const url=`https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?dates=${date}&groups=${g.id}&limit=500`;const r=await fetch(url);if(!r.ok)throw new Error(`HTTP ${r.status}`);const d=await r.json();return Array.isArray(d?.events)?d.events:[]}
+async function run(){const date=ymd($('date').value),provider=$('provider').value;$('status').textContent='Testing ESPN groups and live /resolve…';$('raw').textContent='Loading…';$('games').innerHTML='';$('rows').innerHTML='';$('stats').innerHTML='';
+ const direct={};for(const g of GROUPS){try{direct[g.name]={count:(await directGroup(date,g)).length,error:null}}catch(e){direct[g.name]={count:null,error:e.message}}}
+ let rd,resolveErr=null;try{const r=await fetch(`${API}/resolve?sport=ncaaf&date=${date}&provider=${encodeURIComponent(provider)}`);const txt=await r.text();if(!r.ok)throw new Error(`HTTP ${r.status}: ${txt.slice(0,200)}`);rd=JSON.parse(txt);$('raw').textContent=JSON.stringify(rd,null,2)}catch(e){resolveErr=e;$('raw').textContent=String(e)}
+ const games=eventsFromResolve(rd);const rc={};GROUPS.forEach(g=>rc[g.name]=countDivision(games,g.name));
+ $('stats').innerHTML=GROUPS.map(g=>`<div class="stat"><b>${rc[g.name]}</b><small>${g.name} VIA RESOLVE</small></div>`).join('');
+ $('rows').innerHTML=GROUPS.map(g=>{const d=direct[g.name];const r=rc[g.name];let result,cls;if(d.error){result='ESPN request failed';cls='bad'}else if(d.count>0&&r===0){result='BACKEND/DEPLOY ISSUE';cls='bad'}else if(d.count===0&&r===0){result='GROUP/FEED ISSUE';cls='bad'}else if(r>0){result='PASS';cls='ok'}else{result='CHECK';cls='bad'}return `<tr><td><b>${g.name}</b> (group ${g.id})</td><td>${d.error?'ERROR: '+d.error:d.count}</td><td>${r}</td><td class="${cls}">${result}</td></tr>`}).join('');
+ const samples=games.filter(g=>['FCS','DII','DIII'].includes(String(g?.division||'').toUpperCase())).slice(0,20);$('games').innerHTML=samples.length?samples.map(g=>`<div class="game"><b>${title(g)}</b>${g.division||'?'} • ${g.network||g.broadcast||'No network'}</div>`).join(''):'<div class="muted">No FCS/DII/DIII games returned by /resolve.</div>';
+ $('status').textContent=resolveErr?`/resolve failed: ${resolveErr.message}`:`/resolve returned ${games.length} total games. Compare each row above.`;
 }
 $('run').addEventListener('click',run);run();
-</script>
-</body>
-</html>
+</script></body></html>
