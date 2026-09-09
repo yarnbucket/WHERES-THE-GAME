@@ -3,8 +3,7 @@ import { resolveGame } from "../logic/resolver.js";
 
 const router = express.Router();
 
-// Active pro football leagues outside the NFL that ESPN exposes
-// through the same public API family used by the rest of WTG.
+// Active pro football leagues outside the NFL that ESPN exposes.
 const OTHER_FOOTBALL_LEAGUES = [
   {
     key: "cfl",
@@ -40,10 +39,22 @@ function dateKeyFromEvent(event) {
   const date = new Date(raw);
   if (!Number.isFinite(date.getTime())) return null;
 
-  return date
-    .toISOString()
-    .slice(0, 10)
-    .replaceAll("-", "");
+  // WTG displays and filters schedules in Eastern Time. Using UTC here
+  // moves late CFL games (for example 10 PM ET) onto the following date.
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(date);
+
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+
+  return year && month && day
+    ? `${year}${month}${day}`
+    : null;
 }
 
 function getBroadcast(competition) {
@@ -115,24 +126,141 @@ async function fetchJson(url, label) {
   return response.json();
 }
 
-async function fetchScoreboardGames(config, date) {
+function targetDateUtc(dateKey) {
+  const text = String(dateKey || "");
+  if (!/^\d{8}$/.test(text)) return null;
+
+  const year = Number(text.slice(0, 4));
+  const month = Number(text.slice(4, 6));
+  const day = Number(text.slice(6, 8));
+  const value = Date.UTC(year, month - 1, day, 12, 0, 0);
+
+  return Number.isFinite(value) ? value : null;
+}
+
+function calendarWeekForDate(scoreboardData, date) {
+  const target = targetDateUtc(date);
+  if (target == null) return null;
+
+  const calendar = scoreboardData?.leagues?.[0]?.calendar;
+  if (!Array.isArray(calendar)) return null;
+
+  for (const seasonType of calendar) {
+    const entries = Array.isArray(seasonType?.entries)
+      ? seasonType.entries
+      : [];
+
+    for (const entry of entries) {
+      const start = new Date(entry?.startDate || 0).getTime();
+      const end = new Date(entry?.endDate || 0).getTime();
+
+      if (
+        Number.isFinite(start) &&
+        Number.isFinite(end) &&
+        target >= start &&
+        target <= end
+      ) {
+        const week =
+          entry?.value ??
+          entry?.week ??
+          entry?.number ??
+          null;
+
+        const seasonTypeValue =
+          seasonType?.value ??
+          seasonType?.type ??
+          2;
+
+        if (week != null) {
+          return {
+            week: String(week),
+            seasonType: String(seasonTypeValue || 2)
+          };
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+async function fetchScoreboardData(config, query) {
   const url =
     `https://site.api.espn.com/apis/site/v2/sports/` +
-    `${config.sport}/${config.league}/scoreboard` +
-    `?dates=${date}&limit=100`;
+    `${config.sport}/${config.league}/scoreboard?${query}`;
 
-  const data = await fetchJson(
+  return fetchJson(
     url,
     `${config.label} ESPN scoreboard`
   );
+}
 
-  return (data?.events ?? []).map(
-    (event) => normalizeEvent(
+function eventsForDate(data, config, date, source) {
+  return (data?.events ?? [])
+    .filter((event) => dateKeyFromEvent(event) === date)
+    .map((event) => normalizeEvent(
       event,
       config,
-      { source: "espn-scoreboard" }
-    )
+      { source }
+    ));
+}
+
+async function fetchScoreboardGames(config, date) {
+  const data = await fetchScoreboardData(
+    config,
+    `dates=${encodeURIComponent(date)}&limit=100`
   );
+
+  const directGames = eventsForDate(
+    data,
+    config,
+    date,
+    "espn-scoreboard-date"
+  );
+
+  if (directGames.length) {
+    return {
+      games: directGames,
+      data,
+      source: "espn-scoreboard-date"
+    };
+  }
+
+  // ESPN's CFL date query can return an empty events array for future
+  // dates even though that week's games are already published. The
+  // scoreboard response still carries its season calendar, so identify
+  // the requested week and ask ESPN for that week instead.
+  const weekInfo = calendarWeekForDate(data, date);
+
+  if (weekInfo) {
+    const weekData = await fetchScoreboardData(
+      config,
+      `week=${encodeURIComponent(weekInfo.week)}` +
+      `&seasontype=${encodeURIComponent(weekInfo.seasonType)}` +
+      `&limit=100`
+    );
+
+    const weekGames = eventsForDate(
+      weekData,
+      config,
+      date,
+      "espn-scoreboard-week"
+    );
+
+    if (weekGames.length) {
+      return {
+        games: weekGames,
+        data,
+        source: "espn-scoreboard-week"
+      };
+    }
+  }
+
+  return {
+    games: [],
+    data,
+    source: "espn-scoreboard-date"
+  };
 }
 
 function extractTeams(data) {
@@ -224,22 +352,20 @@ async function fetchTeamScheduleGames(config, date) {
 }
 
 async function fetchLeagueGames(config, date) {
-  const scoreboardGames = await fetchScoreboardGames(
+  const scoreboardResult = await fetchScoreboardGames(
     config,
     date
   );
 
-  if (scoreboardGames.length) {
+  if (scoreboardResult.games.length) {
     return {
-      games: scoreboardGames,
-      source: "espn-scoreboard",
-      fallbackUsed: false
+      games: scoreboardResult.games,
+      source: scoreboardResult.source,
+      fallbackUsed:
+        scoreboardResult.source !== "espn-scoreboard-date"
     };
   }
 
-  // ESPN's CFL date scoreboard can return zero future events even when
-  // the season schedule is already published. The team schedule endpoint
-  // is a better source for those future dates, so use it as a fallback.
   if (config.key === "cfl") {
     const scheduleGames = await fetchTeamScheduleGames(
       config,
@@ -255,7 +381,7 @@ async function fetchLeagueGames(config, date) {
 
   return {
     games: [],
-    source: "espn-scoreboard",
+    source: scoreboardResult.source,
     fallbackUsed: false
   };
 }
@@ -279,8 +405,8 @@ function dedupeGames(games) {
     );
 }
 
-// This route is mounted at /resolve before the main resolve router.
-// It handles only sport=otherfootball and passes every other request on.
+// Mounted at /resolve before the main resolver. Handles only
+// sport=otherfootball and passes all other requests through.
 router.get("/", async (req, res, next) => {
   const sportKey = String(req.query.sport ?? "")
     .toLowerCase()
@@ -335,8 +461,6 @@ router.get("/", async (req, res, next) => {
     .filter((result) => result.status === "fulfilled")
     .flatMap((result) => result.value.games);
 
-  // A failure in one league should not hide games from the other league.
-  // Only return an error when every configured source failed.
   if (!successfulGames.length && results.every(
     (result) => result.status === "rejected"
   )) {
