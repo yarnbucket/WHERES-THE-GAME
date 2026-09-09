@@ -31,6 +31,16 @@ const SPORTS = {
       { league: "nascar-premier", label: "NASCAR Cup" },
       { league: "irl", label: "IndyCar" }
     ]
+  },
+  golf: {
+    sport: "golf",
+    label: "Golf",
+    leagues: [
+      { league: "pga", label: "PGA TOUR" },
+      { league: "lpga", label: "LPGA" },
+      { league: "liv", label: "LIV Golf" },
+      { league: "eur", label: "DP World Tour" }
+    ]
   }
 };
 
@@ -91,12 +101,12 @@ function normalizeEvent(event, sportLabel, metadata = {}) {
   };
 }
 
-function normalizeRacingEvent(event, leagueLabel) {
+function normalizeSingleEvent(event, sportLabel, leagueLabel, fallbackName) {
   const competition = event?.competitions?.[0];
-  const eventName = event?.name ?? competition?.name ?? "Race";
+  const eventName = event?.name ?? competition?.name ?? fallbackName;
   return {
     id: event?.id ?? null,
-    sport: "Racing",
+    sport: sportLabel,
     league: leagueLabel,
     name: eventName,
     away: leagueLabel,
@@ -113,6 +123,14 @@ function normalizeRacingEvent(event, leagueLabel) {
     awayRank: null,
     homeRank: null
   };
+}
+
+function normalizeRacingEvent(event, leagueLabel) {
+  return normalizeSingleEvent(event, "Racing", leagueLabel, "Race");
+}
+
+function normalizeGolfEvent(event, leagueLabel) {
+  return normalizeSingleEvent(event, "Golf", leagueLabel, "Golf Tournament");
 }
 
 async function fetchScoreboard(config, date, groupId = null) {
@@ -208,11 +226,11 @@ async function getBaseGames(sportKey, config, date) {
     const results = await Promise.allSettled(
       config.leagues.map(async (leagueConfig) => {
         const data = await fetchScoreboard({ sport: config.sport, league: leagueConfig.league }, date);
-        return (data.events ?? []).map((event) =>
-          sportKey === "racing"
-            ? normalizeRacingEvent(event, leagueConfig.label)
-            : normalizeEvent(event, config.label, { league: leagueConfig.label })
-        );
+        return (data.events ?? []).map((event) => {
+          if (sportKey === "racing") return normalizeRacingEvent(event, leagueConfig.label);
+          if (sportKey === "golf") return normalizeGolfEvent(event, leagueConfig.label);
+          return normalizeEvent(event, config.label, { league: leagueConfig.label });
+        });
       })
     );
     return dedupeGames(results.filter((result) => result.status === "fulfilled").flatMap((result) => result.value));
