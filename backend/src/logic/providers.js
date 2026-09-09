@@ -29,6 +29,7 @@ export const PROVIDERS = {
 
       "CBS Sports Network": "221",
       "Golf Channel": "218",
+      "Golf Chnl": "218",
       GOLF: "218",
 
       BTN: "610",
@@ -183,6 +184,7 @@ export const PROVIDERS = {
 
       "CBS Sports Network": null,
       "Golf Channel": null,
+      "Golf Chnl": null,
 
       BTN: null,
       "Big Ten Network": null,
