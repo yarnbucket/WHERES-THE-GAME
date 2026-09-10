@@ -9,6 +9,7 @@ on:
       - "app.html"
       - "wtg-*.js"
       - "scripts/validate-live.mjs"
+      - "scripts/validate-browser.mjs"
       - ".github/workflows/live-validation.yml"
   workflow_dispatch:
 
@@ -19,7 +20,7 @@ concurrency:
 jobs:
   validate-live-app:
     runs-on: ubuntu-latest
-    timeout-minutes: 6
+    timeout-minutes: 10
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -27,5 +28,13 @@ jobs:
       - name: Wait for Render and GitHub Pages deploys
         run: sleep 45
 
-      - name: Validate live Rugby end to end
+      - name: Validate live backend and published frontend assets
         run: node scripts/validate-live.mjs
+
+      - name: Install Playwright browser
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Validate the actual live UI on a mobile viewport
+        run: node scripts/validate-browser.mjs
