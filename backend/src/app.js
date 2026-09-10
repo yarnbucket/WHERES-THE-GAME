@@ -15,6 +15,7 @@ import collegeSoccerRoute from "./routes/collegeSoccer.js";
 import mmaRoute from "./routes/mma.js";
 import boxingRoute from "./routes/boxing.js";
 import volleyballRoute from "./routes/volleyball.js";
+import collegeSoftballRoute from "./routes/collegeSoftball.js";
 import resolveRoute from "./routes/resolve.js";
 
 const app = express();
@@ -74,6 +75,7 @@ app.use("/resolve", collegeSoccerRoute);
 app.use("/resolve", mmaRoute);
 app.use("/resolve", boxingRoute);
 app.use("/resolve", volleyballRoute);
+app.use("/resolve", collegeSoftballRoute);
 app.use("/resolve", resolveRoute);
 
 // Root endpoint
