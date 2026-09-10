@@ -896,7 +896,7 @@
 .game-card .favorite,.game-card a,.game-card button{cursor:pointer}
 
 /* 0.1H8i — Weekly AP Top 25 Team-ID Join + Search + Profiles */
-.profile-settings-block h3,.favorite-sports-profile-block h3{margin:8px 0;color:#f5fbff;font-size:16px;letter-spacing:.02em}
+.profile-settings-block h3,.favorite-sports-profile-block h3,.notification-profile-block h3{margin:8px 0;color:#f5fbff;font-size:16px;letter-spacing:.02em}
 .profile-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin-bottom:10px}
 .profile-toolbar select,.profile-team-add input{
   min-width:0;border:1px solid #315d79;background:#071f31;color:#f5fbff;border-radius:10px;
@@ -909,6 +909,10 @@
 }
 .profile-buttons button.danger{color:#ffd6d6;border-color:#7c3c49}
 .profile-name-active{font-size:13px;color:#91a8ba;margin:0 0 12px}
+.profile-name-editor{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin:-2px 0 8px}
+.profile-name-editor input{min-width:0;border:1px solid #315d79;background:#071f31;color:#f5fbff;border-radius:10px;padding:9px 11px;font-weight:800}
+.profile-name-editor span{color:#7895a8;font-size:10px;max-width:190px}
+.profile-save-status{height:16px;margin:-8px 0 8px;color:#56dda4;font-size:11px;font-weight:850}
 .profile-preference-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .profile-pref-card{border:1px solid #315d79;border-radius:14px;background:rgba(4,24,39,.62);padding:11px}
 .profile-pref-card h4{margin:0 0 8px;color:#f5fbff;font-size:14px}
@@ -918,17 +922,23 @@
 .team-chip-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .team-chip{display:inline-flex;align-items:center;gap:5px;border:1px solid #315d79;border-radius:999px;padding:6px 8px;background:#061b2a;color:#dcecf7;font-size:12px;font-weight:800}
 .team-chip button{border:0;background:transparent;color:#91a8ba;font-weight:900;cursor:pointer;padding:0 1px}
-.favorite-sports-grid{display:flex;flex-wrap:wrap;gap:7px}
+.favorite-sports-grid{display:grid;gap:10px}
+.profile-sport-group{display:flex;flex-wrap:wrap;gap:7px;padding:10px;border:1px solid rgba(49,93,121,.72);border-radius:13px;background:rgba(4,24,39,.40)}
+.profile-sport-group h4{flex:0 0 100%;margin:0 0 2px;color:#8eb1c7;font-size:10px;letter-spacing:.10em;text-transform:uppercase}
 .profile-sport-chip.active{background:#0e4f7a;border-color:#54c7ff;color:#fff;box-shadow:0 0 12px rgba(84,199,255,.18)}
 .profile-sport-chip small{display:block;font-size:9px;opacity:.72;margin-top:2px}
 .profile-help{font-size:12px;color:#91a8ba;margin:8px 0 0}
 .profile-tag{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:900;border-radius:999px;padding:3px 7px;margin-left:6px;vertical-align:middle}
 .profile-tag.love{background:rgba(255,84,118,.12);color:#ffb7c2;border:1px solid rgba(255,84,118,.35)}
 .profile-tag.hate{background:rgba(255,147,72,.12);color:#ffc6a1;border:1px solid rgba(255,147,72,.35)}
+.profile-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;margin:8px 0;border:1px solid #315d79;border-radius:12px;background:rgba(4,24,39,.62)}
+.profile-toggle-row strong{display:block;color:#f5fbff;font-size:13px}
+.profile-toggle-row small{display:block;margin-top:3px;color:#91a8ba;font-size:10px;line-height:1.25}
 @media(max-width:640px){
   .profile-toolbar{grid-template-columns:1fr}
   .profile-preference-grid{grid-template-columns:1fr}
   .profile-buttons button{flex:1}
+  .profile-name-editor{grid-template-columns:1fr}.profile-name-editor span{max-width:none}
 }
 
 
@@ -1029,12 +1039,18 @@
       <div class="profile-toolbar">
         <select id="profileSelect" aria-label="User profile"></select>
         <div class="profile-buttons">
-          <button type="button" id="loadProfileBtn">LOAD</button>
           <button type="button" id="newProfileBtn">NEW</button>
+          <button type="button" id="renameProfileBtn">RENAME</button>
+          <button type="button" id="duplicateProfileBtn">COPY</button>
           <button type="button" id="deleteProfileBtn" class="danger">DELETE</button>
         </div>
       </div>
+      <div class="profile-name-editor">
+        <input id="profileNameInput" placeholder="Profile name…" maxlength="24" autocomplete="off">
+        <span>Enter a name, then choose NEW or RENAME.</span>
+      </div>
       <p class="profile-name-active" id="activeProfileLabel"></p>
+      <p class="profile-save-status" id="profileSaveStatus" role="status" aria-live="polite"></p>
 
       <div class="profile-preference-grid">
         <div class="profile-pref-card">
@@ -1057,6 +1073,16 @@
       </div>
       <datalist id="teamSuggestions"></datalist>
       <p class="profile-help">Team suggestions grow from live schedule data and saved profiles. You can also type the full team name directly.</p>
+    </div>
+
+    <div class="settings-divider"></div>
+
+    <div class="notification-profile-block">
+      <h3>🔔 Profile Alerts</h3>
+      <p class="settings-copy">Choose which games are important enough to flag for this profile.</p>
+      <label class="profile-toggle-row"><span><strong>LOVE-team alerts</strong><small>Flag upcoming games involving a LOVE team.</small></span><span class="switch"><input id="profileAlertsEnabled" type="checkbox"><span class="slider"></span></span></label>
+      <label class="profile-toggle-row"><span><strong>Confirmed viewing only</strong><small>Require a TV channel or streaming service.</small></span><span class="switch"><input id="profileConfirmedOnly" type="checkbox"><span class="slider"></span></span></label>
+      <label class="profile-toggle-row"><span><strong>LOVE vs HATE rivalry alerts</strong><small>Highlight the profile's highest-interest matchups.</small></span><span class="switch"><input id="profileRivalryAlerts" type="checkbox"><span class="slider"></span></span></label>
     </div>
 
     <div class="settings-divider"></div>
@@ -1103,7 +1129,7 @@
       <button id="coreSportsOnly">Core sports</button>
     </div>
     <div class="sports-settings" id="sportsSettings"></div>
-    <p class="settings-foot">0.1H8g adds persistent profiles, LOVE/HATE teams and favorite sports.  Live schedule/provider feeds are connected sport-by-sport without changing your saved tab preferences.</p>
+    <p class="settings-foot">0.1H8z keeps provider, viewing mode, visible sports and alert preferences with each profile. HATE games are hidden unless a LOVE team is also playing.</p>
   </section>
 </div>
 
@@ -1164,6 +1190,40 @@ const VIEWING_MODE_PREFS_KEY="wtg-viewing-mode-v1";
 const PROFILE_STORE_KEY="wtg-user-profiles-v1";
 const ACTIVE_PROFILE_KEY="wtg-active-profile-v1";
 
+const PROFILE_PROVIDERS=new Set(["directv","xfinity","fios","sling","streaming"]);
+const PROFILE_VIEWING_MODES=new Set(["standard","national","local"]);
+
+function currentProfileDefaults(){
+  let visibleSports=null;
+  try{visibleSports=JSON.parse(localStorage.getItem(SPORT_PREFS_KEY)||"null")}catch{}
+  return {
+    loveTeams:[],hateTeams:[],favoriteSports:[],
+    provider:PROFILE_PROVIDERS.has(localStorage.getItem(PROVIDER_PREFS_KEY))?localStorage.getItem(PROVIDER_PREFS_KEY):"directv",
+    viewingMode:PROFILE_VIEWING_MODES.has(localStorage.getItem(VIEWING_MODE_PREFS_KEY))?localStorage.getItem(VIEWING_MODE_PREFS_KEY):"standard",
+    visibleSports:Array.isArray(visibleSports)?visibleSports.filter(id=>SPORT_CATALOG.some(s=>s.id===id)):SPORT_CATALOG.filter(s=>s.defaultOn).map(s=>s.id),
+    notifications:{enabled:false,confirmedViewingOnly:true,rivalryAlerts:true}
+  };
+}
+
+function normalizeProfile(profile,name){
+  const defaults=currentProfileDefaults();
+  const notifications=profile?.notifications||{};
+  return {
+    name:name||profile?.name||"DEFAULT",
+    loveTeams:Array.isArray(profile?.loveTeams)?profile.loveTeams:[],
+    hateTeams:Array.isArray(profile?.hateTeams)?profile.hateTeams:[],
+    favoriteSports:Array.isArray(profile?.favoriteSports)?profile.favoriteSports:[],
+    provider:PROFILE_PROVIDERS.has(profile?.provider)?profile.provider:defaults.provider,
+    viewingMode:PROFILE_VIEWING_MODES.has(profile?.viewingMode)?profile.viewingMode:defaults.viewingMode,
+    visibleSports:Array.isArray(profile?.visibleSports)?profile.visibleSports.filter(id=>SPORT_CATALOG.some(s=>s.id===id)):defaults.visibleSports,
+    notifications:{
+      enabled:notifications.enabled===true,
+      confirmedViewingOnly:notifications.confirmedViewingOnly!==false,
+      rivalryAlerts:notifications.rivalryAlerts!==false
+    }
+  };
+}
+
 function escapeHtml(value){
   return String(value??"")
     .replace(/&/g,"&amp;")
@@ -1181,14 +1241,17 @@ function normalizeTeamName(value){
 function readProfiles(){
   try{
     const raw=JSON.parse(localStorage.getItem(PROFILE_STORE_KEY)||"null");
-    if(raw&&typeof raw==="object"&&!Array.isArray(raw)&&Object.keys(raw).length)return raw;
+    if(raw&&typeof raw==="object"&&!Array.isArray(raw)&&Object.keys(raw).length){
+      return Object.fromEntries(Object.entries(raw).map(([name,profile])=>[name,normalizeProfile(profile,name)]));
+    }
   }catch{}
   const starter={
     "DEFAULT":{
       name:"DEFAULT",
       loveTeams:[],
       hateTeams:[],
-      favoriteSports:[]
+      favoriteSports:[],
+      ...currentProfileDefaults()
     }
   };
   localStorage.setItem(PROFILE_STORE_KEY,JSON.stringify(starter));
@@ -1215,24 +1278,52 @@ function saveActiveProfile(profile){
     name:key,
     loveTeams:[...new Set((profile.loveTeams||[]).map(cleanTeamName).filter(Boolean))],
     hateTeams:[...new Set((profile.hateTeams||[]).map(cleanTeamName).filter(Boolean))],
-    favoriteSports:[...new Set((profile.favoriteSports||[]).filter(id=>SPORT_CATALOG.some(s=>s.id===id)))]
+    favoriteSports:[...new Set((profile.favoriteSports||[]).filter(id=>SPORT_CATALOG.some(s=>s.id===id)))],
+    provider:PROFILE_PROVIDERS.has(profile.provider)?profile.provider:"directv",
+    viewingMode:PROFILE_VIEWING_MODES.has(profile.viewingMode)?profile.viewingMode:"standard",
+    visibleSports:[...new Set((profile.visibleSports||[]).filter(id=>SPORT_CATALOG.some(s=>s.id===id)))],
+    notifications:{
+      enabled:profile.notifications?.enabled===true,
+      confirmedViewingOnly:profile.notifications?.confirmedViewingOnly!==false,
+      rivalryAlerts:profile.notifications?.rivalryAlerts!==false
+    }
   };
   writeProfiles(profiles);
+  showProfileSaved();
 }
 function createProfile(name){
   const cleaned=cleanTeamName(name).toUpperCase();
   if(!cleaned)return false;
   const profiles=readProfiles();
   if(profiles[cleaned])return false;
-  profiles[cleaned]={name:cleaned,loveTeams:[],hateTeams:[],favoriteSports:[]};
+  profiles[cleaned]={name:cleaned,...currentProfileDefaults()};
   writeProfiles(profiles);
   localStorage.setItem(ACTIVE_PROFILE_KEY,cleaned);
   return true;
+}
+function renameActiveProfile(name){
+  const cleaned=cleanTeamName(name).toUpperCase();
+  if(!cleaned)return false;
+  const profiles=readProfiles(),active=getActiveProfileName();
+  if(cleaned!==active&&profiles[cleaned])return false;
+  const profile={...profiles[active],name:cleaned};
+  if(cleaned!==active)delete profiles[active];
+  profiles[cleaned]=profile;
+  writeProfiles(profiles);localStorage.setItem(ACTIVE_PROFILE_KEY,cleaned);return true;
+}
+function duplicateActiveProfile(name){
+  const cleaned=cleanTeamName(name).toUpperCase();
+  if(!cleaned)return false;
+  const profiles=readProfiles(),active=getActiveProfileName();
+  if(profiles[cleaned])return false;
+  profiles[cleaned]={...profiles[active],name:cleaned,loveTeams:[...(profiles[active].loveTeams||[])],hateTeams:[...(profiles[active].hateTeams||[])],favoriteSports:[...(profiles[active].favoriteSports||[])],visibleSports:[...(profiles[active].visibleSports||[])],notifications:{...(profiles[active].notifications||{})}};
+  writeProfiles(profiles);localStorage.setItem(ACTIVE_PROFILE_KEY,cleaned);return true;
 }
 function activateProfile(name){
   const profiles=readProfiles();
   if(!profiles[name])return false;
   localStorage.setItem(ACTIVE_PROFILE_KEY,name);
+  applyProfilePreferences(profiles[name]);
   return true;
 }
 function deleteActiveProfile(){
@@ -1251,7 +1342,7 @@ function profileTeamMatch(game,team){
   const text=gameIdentityText(game);
   if(!text)return false;
   const escaped=wanted.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
-  return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`,"i").test(text) || text.includes(wanted);
+  return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`,"i").test(text);
 }
 function profileAffinity(game){
   const p=getActiveProfile();
@@ -1265,6 +1356,10 @@ function profileAffinityScore(game){
   if(love)return 8000;
   if(hate)return 7000;
   return 0;
+}
+function profileAllowsGame(game){
+  const {love,hate}=profileAffinity(game);
+  return !hate||love;
 }
 function favoriteSportScore(game){
   const fav=getActiveProfile().favoriteSports||[];
@@ -1606,7 +1701,7 @@ function viewingModeMatches(game){
   return true;
 }
 function filterGamesForViewingMode(games){
-  return (Array.isArray(games)?games:[]).filter(viewingModeMatches);
+  return (Array.isArray(games)?games:[]).filter(viewingModeMatches).filter(profileAllowsGame);
 }
 
 let selectedSport="whats-on", selectedDate=new Date(), favoritesOnly=false, currentGames=[], currentNcaafRankingMeta=null;
@@ -1617,9 +1712,22 @@ loveTeamInput=document.getElementById("loveTeamInput"), hateTeamInput=document.g
 loveTeamChips=document.getElementById("loveTeamChips"), hateTeamChips=document.getElementById("hateTeamChips"),
 favoriteSportsGrid=document.getElementById("favoriteSportsGrid"), teamSuggestions=document.getElementById("teamSuggestions"),
 gameSearchInput=document.getElementById("gameSearchInput"), gameSearchClear=document.getElementById("gameSearchClear");
+const profileNameInput=document.getElementById("profileNameInput"),profileSaveStatus=document.getElementById("profileSaveStatus"),
+profileAlertsEnabled=document.getElementById("profileAlertsEnabled"),profileConfirmedOnly=document.getElementById("profileConfirmedOnly"),profileRivalryAlerts=document.getElementById("profileRivalryAlerts");
 
+let profileSavedTimer=null;
+function showProfileSaved(){
+  if(!profileSaveStatus)return;
+  profileSaveStatus.textContent=`Saved to ${getActiveProfileName()}`;
+  clearTimeout(profileSavedTimer);
+  profileSavedTimer=setTimeout(()=>{profileSaveStatus.textContent=""},1600);
+}
 
 function getVisibleSportIds(){
+  const profileVisible=getActiveProfile()?.visibleSports;
+  if(Array.isArray(profileVisible)&&profileVisible.length){
+    return profileVisible.filter(id=>SPORT_CATALOG.some(s=>s.id===id));
+  }
   try{
     const saved=JSON.parse(localStorage.getItem(SPORT_PREFS_KEY)||"null");
     if(Array.isArray(saved)&&saved.length)return saved.filter(id=>SPORT_CATALOG.some(s=>s.id===id));
@@ -1630,6 +1738,17 @@ function getVisibleSportIds(){
 function saveVisibleSportIds(ids){
   const unique=SPORT_CATALOG.map(s=>s.id).filter(id=>ids.includes(id));
   localStorage.setItem(SPORT_PREFS_KEY,JSON.stringify(unique.length?unique:["mlb"]));
+}
+
+function saveCurrentProfileSettings(changes){
+  saveActiveProfile({...getActiveProfile(),...changes});
+}
+
+function applyProfilePreferences(profile){
+  const p=normalizeProfile(profile,profile?.name);
+  saveSelectedProvider(p.provider);
+  saveViewingMode(p.viewingMode);
+  saveVisibleSportIds(p.visibleSports);
 }
 
 function renderSportTabs(){
@@ -1665,6 +1784,7 @@ function renderViewingModeSettings(){
 }
 function applyViewingMode(mode){
   saveViewingMode(mode);
+  saveCurrentProfileSettings({viewingMode:selectedViewingMode});
   renderViewingModeSettings();
   loadGames();
 }
@@ -1688,6 +1808,7 @@ function renderProviderSettings(){
 
 function applyProvider(provider){
   saveSelectedProvider(provider);
+  saveCurrentProfileSettings({provider:selectedProvider});
   renderProviderSettings();
   loadGames();
 }
@@ -1704,6 +1825,7 @@ function renderSportsSettings(){
 function applySportsSettings(){
   const ids=[...sportsSettings.querySelectorAll("input[data-sport-setting]:checked")].map(x=>x.dataset.sportSetting);
   saveVisibleSportIds(ids);
+  saveCurrentProfileSettings({visibleSports:ids});
   renderSportTabs();
   if(selectedSport!=="whats-on"&&!ids.includes(selectedSport))selectedSport="whats-on";
   renderSportTabs();
@@ -1732,11 +1854,24 @@ function renderProfileSettings(){
   profileSelect.innerHTML=Object.keys(profiles).sort().map(name=>`<option value="${name}" ${name===active?"selected":""}>${name}</option>`).join("");
   activeProfileLabel.textContent=`ACTIVE PROFILE: ${active}`;
   const p=getActiveProfile();
+  if(profileNameInput)profileNameInput.value="";
   const chip=(team,type)=>`<span class="team-chip">${type==="love"?"❤️":"💢"} ${escapeHtml(team)} <button type="button" data-remove-team="${escapeHtml(team)}" data-team-type="${type}" aria-label="Remove ${escapeHtml(team)}">×</button></span>`;
   loveTeamChips.innerHTML=(p.loveTeams||[]).map(t=>chip(t,"love")).join("")||'<span class="profile-help">No LOVE teams yet.</span>';
   hateTeamChips.innerHTML=(p.hateTeams||[]).map(t=>chip(t,"hate")).join("")||'<span class="profile-help">No HATE teams yet.</span>';
-  favoriteSportsGrid.innerHTML=SPORT_CATALOG.map(s=>`<button type="button" class="profile-sport-chip ${(p.favoriteSports||[]).includes(s.id)?"active":""}" data-profile-sport="${s.id}">${s.tab}<small>${s.group}</small></button>`).join("");
+  const sportGroups=[...new Set(SPORT_CATALOG.map(s=>s.group))];
+  favoriteSportsGrid.innerHTML=sportGroups.map(group=>`<section class="profile-sport-group"><h4>${escapeHtml(group)}</h4>${SPORT_CATALOG.filter(s=>s.group===group).map(s=>`<button type="button" class="profile-sport-chip ${(p.favoriteSports||[]).includes(s.id)?"active":""}" data-profile-sport="${s.id}">${s.tab}</button>`).join("")}</section>`).join("");
+  profileAlertsEnabled.checked=p.notifications?.enabled===true;
+  profileConfirmedOnly.checked=p.notifications?.confirmedViewingOnly!==false;
+  profileRivalryAlerts.checked=p.notifications?.rivalryAlerts!==false;
   teamSuggestions.innerHTML=knownTeamSuggestions().map(t=>`<option value="${escapeHtml(t)}"></option>`).join("");
+}
+function saveProfileNotifications(){
+  saveCurrentProfileSettings({notifications:{
+    enabled:profileAlertsEnabled.checked,
+    confirmedViewingOnly:profileConfirmedOnly.checked,
+    rivalryAlerts:profileRivalryAlerts.checked
+  }});
+  favoritesOnly?loadFavorites():loadGames();
 }
 function addProfileTeam(type,value){
   const team=cleanTeamName(value);
@@ -1753,7 +1888,7 @@ function addProfileTeam(type,value){
   if(type==="love")loveTeamInput.value=""; else hateTeamInput.value="";
   renderProfileSettings();
   renderSportTabs();
-  if(currentGames.length)renderGames(currentGames);
+  favoritesOnly?loadFavorites():loadGames();
 }
 function removeProfileTeam(type,team){
   const p={...getActiveProfile()};
@@ -1761,7 +1896,7 @@ function removeProfileTeam(type,team){
   p[key]=(p[key]||[]).filter(x=>normalizeTeamName(x)!==normalizeTeamName(team));
   saveActiveProfile(p);
   renderProfileSettings();
-  if(currentGames.length)renderGames(currentGames);
+  favoritesOnly?loadFavorites():loadGames();
 }
 function toggleFavoriteSport(sportId){
   const p={...getActiveProfile()};
@@ -3006,9 +3141,14 @@ function teamParts(name){
 }
 function renderGame(game,conflictKeys){
   const d=getViewingSourceDisplay(game,conflictKeys),favorite=isFavorite(game.id);
+  const affinity=profileAffinity(game),notificationPrefs=getActiveProfile().notifications||{};
   const hasTeams=game.away&&game.home;
   const baseSportLabel=sportLabels[game?._sportKey]||game.sport||sportLabels[selectedSport]||"Sports";
-  const sportLine=game.series?`${baseSportLabel} • ${game.series}`:baseSportLabel;
+  const confirmedSource=Boolean((game.broadcast||game.network||"").trim())&&!/unavailable|tbd|not assigned/i.test(`${game.broadcast||game.network||""} ${d.channel||""}`);
+  const shouldAlert=notificationPrefs.enabled&&affinity.love&&(!notificationPrefs.confirmedViewingOnly||confirmedSource);
+  const rivalry=shouldAlert&&affinity.hate&&notificationPrefs.rivalryAlerts;
+  const profileTags=`${affinity.love?'<span class="profile-tag love">❤️ LOVE</span>':""}${affinity.hate?'<span class="profile-tag hate">💢 HATE</span>':""}${shouldAlert?`<span class="profile-tag love">${rivalry?"⚡ RIVALRY":"🔔 ALERT"}</span>`:""}`;
+  const sportLine=(game.series?`${baseSportLabel} • ${game.series}`:baseSportLabel)+profileTags;
   const network=game.broadcast||game.network||"Broadcast information unavailable";
   const venue=game.venue||"";
   const eventTitle=game.name||"Event";
@@ -3124,24 +3264,37 @@ providerOptions?.addEventListener("click",e=>{
 });
 
 
-profileSelect?.addEventListener("change",()=>{});
-document.getElementById("loadProfileBtn")?.addEventListener("click",()=>{
+profileSelect?.addEventListener("change",()=>{
   const name=profileSelect.value;
   if(!activateProfile(name))return;
   renderProfileSettings();
+  renderViewingModeSettings();
+  renderProviderSettings();
+  renderSportsSettings();
   renderSportTabs();
   loadGames();
 });
 document.getElementById("newProfileBtn")?.addEventListener("click",()=>{
-  const name=prompt("New profile name:");
-  if(name===null)return;
+  const name=profileNameInput.value;
   if(!createProfile(name)){
-    alert("Enter a new profile name that is not already in use.");
+    profileSaveStatus.textContent="Enter a unique profile name.";
     return;
   }
+  applyProfilePreferences(getActiveProfile());
   renderProfileSettings();
+  renderViewingModeSettings();renderProviderSettings();renderSportsSettings();
   renderSportTabs();
+  showProfileSaved();
   loadGames();
+});
+document.getElementById("renameProfileBtn")?.addEventListener("click",()=>{
+  if(!renameActiveProfile(profileNameInput.value)){profileSaveStatus.textContent="Enter a unique profile name.";return;}
+  renderProfileSettings();renderSportTabs();showProfileSaved();
+});
+document.getElementById("duplicateProfileBtn")?.addEventListener("click",()=>{
+  if(!duplicateActiveProfile(profileNameInput.value)){profileSaveStatus.textContent="Enter a unique profile name.";return;}
+  applyProfilePreferences(getActiveProfile());
+  renderProfileSettings();renderViewingModeSettings();renderProviderSettings();renderSportsSettings();renderSportTabs();showProfileSaved();loadGames();
 });
 document.getElementById("deleteProfileBtn")?.addEventListener("click",()=>{
   const active=getActiveProfileName();
@@ -3151,7 +3304,9 @@ document.getElementById("deleteProfileBtn")?.addEventListener("click",()=>{
   }
   if(!confirm(`Delete profile ${active}?`))return;
   deleteActiveProfile();
+  applyProfilePreferences(getActiveProfile());
   renderProfileSettings();
+  renderViewingModeSettings();renderProviderSettings();renderSportsSettings();
   renderSportTabs();
   loadGames();
 });
@@ -3162,6 +3317,7 @@ hateTeamInput?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefau
 loveTeamChips?.addEventListener("click",e=>{const b=e.target.closest("[data-remove-team]");if(b)removeProfileTeam("love",b.dataset.removeTeam)});
 hateTeamChips?.addEventListener("click",e=>{const b=e.target.closest("[data-remove-team]");if(b)removeProfileTeam("hate",b.dataset.removeTeam)});
 favoriteSportsGrid?.addEventListener("click",e=>{const b=e.target.closest("[data-profile-sport]");if(b)toggleFavoriteSport(b.dataset.profileSport)});
+[profileAlertsEnabled,profileConfirmedOnly,profileRivalryAlerts].forEach(input=>input?.addEventListener("change",saveProfileNotifications));
 
 viewingModeOptions?.addEventListener("click",e=>{
   const btn=e.target.closest("[data-viewing-mode]");
@@ -3169,8 +3325,8 @@ viewingModeOptions?.addEventListener("click",e=>{
   applyViewingMode(btn.dataset.viewingMode);
 });
 
-document.getElementById("showAllSports").addEventListener("click",()=>{saveVisibleSportIds(SPORT_CATALOG.map(s=>s.id));renderSportsSettings();renderSportTabs()});
-document.getElementById("coreSportsOnly").addEventListener("click",()=>{saveVisibleSportIds(["nfl","ncaaf","mlb","nhl","collegehockey","nba","ncaab","ncaaw","wnba","racing","golf","tennis","soccer","collegesoccer"]);renderSportsSettings();renderSportTabs();if(selectedSport!=="whats-on"&&!getVisibleSportIds().includes(selectedSport))selectedSport="whats-on";loadGames()});
+document.getElementById("showAllSports").addEventListener("click",()=>{const ids=SPORT_CATALOG.map(s=>s.id);saveVisibleSportIds(ids);saveCurrentProfileSettings({visibleSports:ids});renderSportsSettings();renderSportTabs();loadGames()});
+document.getElementById("coreSportsOnly").addEventListener("click",()=>{const ids=["nfl","ncaaf","mlb","nhl","collegehockey","nba","ncaab","ncaaw","wnba","racing","golf","tennis","soccer","collegesoccer"];saveVisibleSportIds(ids);saveCurrentProfileSettings({visibleSports:ids});renderSportsSettings();renderSportTabs();if(selectedSport!=="whats-on"&&!getVisibleSportIds().includes(selectedSport))selectedSport="whats-on";loadGames()});
 document.getElementById("prevDay").addEventListener("click",()=>{selectedDate.setDate(selectedDate.getDate()-1);selectedDate=new Date(selectedDate);loadGames()});
 document.getElementById("nextDay").addEventListener("click",()=>{selectedDate.setDate(selectedDate.getDate()+1);selectedDate=new Date(selectedDate);loadGames()});
 document.getElementById("todayBtn").addEventListener("click",()=>{selectedDate=new Date();loadGames()});
@@ -3201,6 +3357,7 @@ gamesList.addEventListener("click",event=>{
   const game=visibleGames[index];
   if(game)googleGameSearch(game);
 });
+applyProfilePreferences(getActiveProfile());
 renderSportTabs();
 renderCollegeFilter();
 renderProFilter();
