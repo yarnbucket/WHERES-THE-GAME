@@ -272,6 +272,16 @@ function isPittsburghTeam(game) {
 function normalizeSportKey(sport) {
   const value = String(sport ?? "").toLowerCase();
 
+  // College baseball uses the same source resolver, but it must never inherit
+  // MLB Extra Innings / MLB package metadata just because its label contains
+  // the word "baseball".
+  if (
+    value.includes("college baseball") ||
+    value.includes("ncaa baseball")
+  ) {
+    return null;
+  }
+
   if (
     value.includes("mlb") ||
     value.includes("baseball")
