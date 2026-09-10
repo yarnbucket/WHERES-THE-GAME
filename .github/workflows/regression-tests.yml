@@ -37,4 +37,6 @@ jobs:
         run: |
           node --check src/app.js
           node --check src/routes/rugby.js
+          node --check src/routes/collegeWrestling.js
           node --check ../wtg-multichannel-patch.js
+          node --check ../wtg-gender-tags-patch.js

@@ -24,8 +24,9 @@
     const key=String(game?._sportKey||"").toLowerCase();
     const sport=String(game?.sport||"").toLowerCase();
     const league=String(game?.league||"").toLowerCase();
-    const isCollegeVolleyball=key==="collegevolleyball"||sport==="college volleyball"||league.includes("college volleyball");
-    if(!isCollegeVolleyball)return html;
+    const usesGenderTags=key==="collegevolleyball"||sport==="college volleyball"||league.includes("college volleyball")||
+      key==="wrestling"||sport==="college wrestling"||league.includes("college wrestling");
+    if(!usesGenderTags)return html;
 
     const gender=String(game?.gender||"").toLowerCase();
     const label=gender==="women"||gender==="female"?"WOMEN":gender==="men"||gender==="male"?"MEN":"";

@@ -1147,7 +1147,7 @@ const SPORT_CATALOG=[
   {id:"track",tab:"Track & Field",label:"Track & Field",group:"Olympic",live:false,defaultOn:true},
   {id:"swimming",tab:"Swimming",label:"Swimming / Diving",group:"Olympic",live:false,defaultOn:true},
   {id:"gymnastics",tab:"Gymnastics",label:"Gymnastics",group:"Olympic",live:false,defaultOn:true},
-  {id:"wrestling",tab:"College Wrestling",label:"College Wrestling",group:"Combat",live:false,defaultOn:true,sourceLabel:"NCAA Wrestling",sourceUrl:"https://www.ncaa.com/sports/wrestling-men/d1"},
+  {id:"wrestling",tab:"College Wrestling",label:"College Wrestling",group:"Combat",live:true,defaultOn:true},
   {id:"prowrestling",tab:"Pro Wrestling",label:"Pro Wrestling / WWE",group:"Combat",live:false,defaultOn:true,sourceLabel:"WWE Schedule",sourceUrl:"https://www.wwe.com/article/wwe-upcoming-events"},
   {id:"otherhockey",tab:"Other Hockey",label:"Other Hockey",group:"Hockey",live:true,defaultOn:true},
   {id:"fieldhockey",tab:"Field Hockey",label:"Field Hockey",group:"Field Sports",live:true,defaultOn:true},
@@ -2120,6 +2120,10 @@ const COLLEGE_SPORT_IDS=new Set([
 ]);
 
 const COLLEGE_FILTERS={
+  wrestling:[
+    ["all","ALL"],["men","MEN"],["women","WOMEN"],["d1","DI"],["d2","DII"],["d3","DIII"],
+    ["bigten","BIG TEN"],["big12","BIG 12"],["acc","ACC"],["eiwa","EIWA"],["mac","MAC"]
+  ],
   ncaaf:[
     ["all","ALL"],["top25","TOP 25"],["fbs","FBS"],["fcs","FCS"],["d2","DII"],["d3","DIII"],
     ["acc","ACC"],["sec","SEC"],["bigten","BIG TEN"],["big12","BIG 12"]
@@ -2712,6 +2716,7 @@ function collegeFilterMatches(game,filter){
   const key=String(filter||"all").toLowerCase();
   if(key==="all")return true;
   if(key==="top25")return isTop25Game(game);
+  if(key==="men"||key==="women")return String(game?.gender||"").toLowerCase()===key;
 
   const division=collegeDivisionKey(game);
   if(key==="fbs")return division==="fbs";
