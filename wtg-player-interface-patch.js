@@ -1,8 +1,8 @@
-/* WTG 0.1H8s — compact broadcast-guide cards using approved WTG colors.
+/* WTG 0.1H8t — compact broadcast-guide cards using approved WTG colors.
    Presentation-only patch: preserves data, filters, favorites, card taps and source priority. */
 (()=>{
   const css=`
-  /* === WTG 0.1H8s COMPACT BROADCAST GUIDE === */
+  /* === WTG 0.1H8t COMPACT BROADCAST GUIDE === */
   .games{gap:10px!important}
   .game-card{
     position:relative!important;display:block!important;padding:0!important;gap:0!important;
@@ -13,8 +13,6 @@
   }
   .game-card:before{display:none!important}
   .game-card .card-main{padding:0!important}
-
-  /* Thin sport strip, matching the compact reference while keeping WTG cyan/blue. */
   .game-card .card-top{
     min-height:30px!important;margin:0!important;padding:0!important;
     display:flex!important;align-items:center!important;justify-content:space-between!important;
@@ -38,8 +36,6 @@
     color:rgba(2,19,32,.62)!important;font-size:15px!important;line-height:1!important
   }
   .game-card .favorite.active{color:#ffe06b!important;background:rgba(2,19,32,.35)!important;border-color:rgba(255,224,107,.55)!important}
-
-  /* Matchup row. */
   .game-card .matchup{
     display:grid!important;grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr)!important;
     align-items:center!important;gap:8px!important;margin:0!important;padding:9px 10px 7px!important;
@@ -64,7 +60,7 @@
     display:block!important;margin-top:2px!important;color:#f7fbff!important;font-size:17px!important;line-height:1.05!important;
     font-weight:1000!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;text-transform:none!important
   }
-  .game-card .team-rank{color:#4bc8ff!important;margin-right:3px!important}
+  .game-card .team-rank{color:#159de8!important;margin-right:3px!important}
   .game-card .at-mark{
     width:24px!important;height:24px!important;border:0!important;border-radius:0!important;background:transparent!important;
     color:#7394a8!important;font-size:11px!important;font-weight:800!important;box-shadow:none!important
@@ -73,8 +69,6 @@
     margin:0!important;padding:12px 10px!important;color:#f7fbff!important;font-size:18px!important;font-weight:1000!important;
     text-transform:uppercase!important;background:rgba(5,23,38,.98)!important
   }
-
-  /* Time/network and venue become compact divider rows. */
   .game-card .game-meta{
     display:grid!important;grid-template-columns:auto 1fr auto!important;align-items:center!important;gap:7px!important;
     margin:0!important;padding:7px 10px!important;border-top:1px solid rgba(86,163,205,.20)!important;
@@ -98,9 +92,7 @@
     margin:0!important;padding:6px 10px!important;color:#8fa8b9!important;background:rgba(3,17,29,.92)!important;
     border-bottom:1px solid rgba(86,163,205,.16)!important;font-size:10px!important;line-height:1.2!important
   }
-  .game-card .venue-glyph{color:#42bdf5!important}
-
-  /* Tuner: large WTG-blue channel plate on the left, provider/source info on the right. */
+  .game-card .venue-glyph{color:#159de8!important}
   .game-card .directv-box{
     position:relative!important;display:grid!important;grid-template-columns:72px minmax(0,1fr)!important;
     grid-template-rows:18px minmax(30px,auto)!important;align-items:center!important;column-gap:0!important;row-gap:0!important;
@@ -109,16 +101,16 @@
   }
   .game-card .directv-label{
     grid-column:1!important;grid-row:1!important;align-self:end!important;min-width:0!important;margin:0!important;padding:5px 6px 0!important;
-    color:#45c8ff!important;background:rgba(15,132,202,.10)!important;border-right:1px solid rgba(69,200,255,.30)!important;
+    color:#159de8!important;background:rgba(21,157,232,.10)!important;border-right:1px solid rgba(21,157,232,.35)!important;
     font-size:8px!important;font-weight:1000!important;line-height:1!important;letter-spacing:.12em!important;text-transform:uppercase!important;text-align:center!important;
     white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important
   }
   .game-card .directv-channel{
     grid-column:1!important;grid-row:2!important;align-self:stretch!important;display:flex!important;align-items:flex-start!important;justify-content:center!important;
     min-width:0!important;max-width:none!important;margin:0!important;padding:1px 4px 6px!important;
-    color:#45c8ff!important;background:rgba(15,132,202,.10)!important;border-right:1px solid rgba(69,200,255,.30)!important;
+    color:#159de8!important;background:rgba(21,157,232,.10)!important;border-right:1px solid rgba(21,157,232,.35)!important;
     font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;font-size:27px!important;line-height:1!important;font-weight:900!important;
-    text-align:center!important;text-shadow:0 0 12px rgba(69,200,255,.38)!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important
+    text-align:center!important;text-shadow:0 0 12px rgba(21,157,232,.45)!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important
   }
   .game-card .directv-channel[data-long-source="true"]{font-size:12px!important;line-height:1.05!important;align-items:center!important;white-space:normal!important}
   .game-card .directv-note{
@@ -127,7 +119,6 @@
     overflow:hidden!important;display:-webkit-box!important;-webkit-line-clamp:3!important;-webkit-box-orient:vertical!important
   }
   .game-card .profile-tag{font-size:8px!important}
-
   @media(max-width:430px){
     .game-card{border-radius:13px!important}
     .game-card .game-sport{font-size:9px!important;padding:5px 9px!important}
@@ -146,5 +137,5 @@
   style.id='wtg-player-interface-style';
   style.textContent=css;
   document.head.appendChild(style);
-  console.info('WTG 0.1H8s compact broadcast-guide interface loaded');
+  console.info('WTG 0.1H8t compact broadcast-guide interface loaded');
 })();
