@@ -10,6 +10,7 @@ import streamingRoute from "./routes/streaming.js";
 import blackoutRoute from "./routes/blackout.js";
 import otherFootballRoute from "./routes/otherFootball.js";
 import tennisRoute from "./routes/tennis.js";
+import soccerRoute from "./routes/soccer.js";
 import resolveRoute from "./routes/resolve.js";
 
 const app = express();
@@ -61,10 +62,10 @@ app.use("/channels", channelsRoute);
 app.use("/streaming", streamingRoute);
 app.use("/blackout", blackoutRoute);
 
-// Sport-specific resolvers intercept their sport key and pass all
-// other /resolve requests through to the existing resolver.
+// Specialized resolvers intercept their sport and pass unrelated requests through.
 app.use("/resolve", otherFootballRoute);
 app.use("/resolve", tennisRoute);
+app.use("/resolve", soccerRoute);
 app.use("/resolve", resolveRoute);
 
 // Root endpoint
