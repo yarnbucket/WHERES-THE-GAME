@@ -17,6 +17,7 @@ const SPORTS = {
     ]
   },
   mlb: { sport: "baseball", league: "mlb", label: "MLB" },
+  cbaseball: { sport: "baseball", league: "college-baseball", label: "College Baseball" },
   nhl: { sport: "hockey", league: "nhl", label: "NHL" },
   collegehockey: { sport: "hockey", league: "mens-college-hockey", label: "College Hockey" },
   nba: { sport: "basketball", league: "nba", label: "NBA" },
@@ -301,7 +302,7 @@ async function normalizeGolfEvent(event, leagueLabel, leagueSlug) {
 async function fetchScoreboard(config, date, groupId = null) {
   let url = `https://site.api.espn.com/apis/site/v2/sports/${config.sport}/${config.league}/scoreboard?dates=${date}`;
   if (groupId) url += `&groups=${groupId}&limit=500`;
-  const response = await fetch(url);
+  const response = await fetch(url, { headers: { accept: "application/json", "user-agent": "WTG/0.1H8n" } });
   if (!response.ok) throw new Error(`ESPN request failed: ${response.status}`);
   return response.json();
 }
@@ -446,7 +447,7 @@ async function fetchLeagueTeams(config) {
     return { sports: results.filter((result) => result.status === "fulfilled").map((result) => result.value) };
   }
   const url = `https://site.api.espn.com/apis/site/v2/sports/${config.sport}/${config.league}/teams?limit=2000`;
-  const response = await fetch(url);
+  const response = await fetch(url, { headers: { accept: "application/json", "user-agent": "WTG/0.1H8n" } });
   if (!response.ok) throw new Error(`ESPN teams request failed: ${response.status}`);
   return response.json();
 }
@@ -483,7 +484,7 @@ function teamMatchesNextSearch(team, query) {
 
 async function fetchTeamSchedule(config, teamId, season) {
   const url = `https://site.api.espn.com/apis/site/v2/sports/${config.sport}/${config.league}/teams/${encodeURIComponent(teamId)}/schedule?season=${encodeURIComponent(season)}`;
-  const response = await fetch(url);
+  const response = await fetch(url, { headers: { accept: "application/json", "user-agent": "WTG/0.1H8n" } });
   if (!response.ok) throw new Error(`ESPN team schedule request failed: ${response.status}`);
   return response.json();
 }
