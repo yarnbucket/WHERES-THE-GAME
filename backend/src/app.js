@@ -97,7 +97,20 @@ app.get("*", (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(
-    `Server running on port ${PORT}`
-  );
+  console.log(`Server running on port ${PORT}`);
+
+  // Deployment gate: exercise the real HTTP route inside the live Render
+  // process before asking the user to inspect Rugby in the frontend.
+  setTimeout(async () => {
+    try {
+      const url = `http://127.0.0.1:${PORT}/resolve?sport=rugby&date=20260912&provider=directv`;
+      const response = await fetch(url, { headers: { "user-agent": "WTG-live-smoke/1.0" } });
+      const data = await response.json();
+      const japanUsa = (data?.games ?? []).find((game) => game?.id === "wtg-rugby-pnc-japan-usa-20260912");
+      const paramount = (japanUsa?.streaming ?? []).some((source) => source?.service === "Paramount+");
+      console.info(`RUGBY_LIVE_SMOKE http=${response.status} count=${data?.count ?? -1} japanUSA=${Boolean(japanUsa)} paramount=${paramount}`);
+    } catch (error) {
+      console.error("RUGBY_LIVE_SMOKE failed:", error);
+    }
+  }, 1200);
 });
