@@ -8,21 +8,45 @@ const LEAGUES = [
   { league: "wta", label: "WTA" }
 ];
 
-// ESPN's Tennis scoreboard is tournament-centric.  Some late-round US Open
-// competitions are returned with a tournament-day midnight timestamp and no
-// match-level TV data.  These official session windows are used only when the
-// ESPN competition itself lacks a usable time/broadcast.
+// Official late-round US Open session schedule. ESPN's Tennis scoreboard is
+// tournament-centric and can leave future bracket slots incomplete or stamped
+// at midnight. We keep real matchups when ESPN supplies them and synthesize a
+// coverage card only when an official televised/streamed session would
+// otherwise disappear from WTG.
 const US_OPEN_DAY_RULES = {
   "20260911": [
-    { league: "WTA", terms: ["doubles", "final"], times: ["12:00"], networks: ["ESPN2", "ESPN+"] },
-    { league: "ATP", terms: ["singles", "semi"], times: ["15:00", "19:00"], networks: ["ESPN", "ESPN+"] }
+    {
+      league: "WTA",
+      terms: ["doubles", "final"],
+      slots: [{ time: "12:00", title: "Women's Doubles Championship", networks: ["ESPN2"] }]
+    },
+    {
+      league: "ATP",
+      terms: ["singles", "semi"],
+      slots: [
+        { time: "15:00", title: "Men's Singles Semifinal #1", networks: ["ESPN", "ESPN Deportes"] },
+        { time: "19:00", title: "Men's Singles Semifinal #2", networks: ["ESPN", "ESPN Deportes"] }
+      ]
+    }
   ],
   "20260912": [
-    { league: "ATP", terms: ["doubles", "final"], times: ["12:00"], networks: ["ESPN+"] },
-    { league: "WTA", terms: ["singles", "final"], times: ["16:00"], networks: ["ESPN", "ESPN+"] }
+    {
+      league: "ATP",
+      terms: ["doubles", "final"],
+      slots: [{ time: "12:00", title: "Men's Doubles Championship", networks: ["ESPN App"] }]
+    },
+    {
+      league: "WTA",
+      terms: ["singles", "final"],
+      slots: [{ time: "16:00", title: "Women's Singles Championship", networks: ["ESPN", "ESPN Deportes"] }]
+    }
   ],
   "20260913": [
-    { league: "ATP", terms: ["singles", "final"], times: ["14:00"], networks: ["ABC", "ESPN+"] }
+    {
+      league: "ATP",
+      terms: ["singles", "final"],
+      slots: [{ time: "14:00", title: "Men's Singles Championship", networks: ["ABC", "ESPN Deportes"] }]
+    }
   ]
 };
 
@@ -69,8 +93,7 @@ function easternIso(dateKey, hhmm) {
   const month = Number(dateKey.slice(4, 6));
   const day = Number(dateKey.slice(6, 8));
   const [hour, minute] = hhmm.split(":").map(Number);
-  // September is EDT (UTC-4).  This helper is intentionally scoped to the
-  // September US Open fallback rules above.
+  // September US Open dates are EDT (UTC-4).
   return new Date(Date.UTC(year, month - 1, day, hour + 4, minute, 0)).toISOString();
 }
 
@@ -159,22 +182,21 @@ function completeCompetitors(competition) {
   return names.every((name) => name && name.toUpperCase() !== "TBD");
 }
 
-function normalizeMatch(event, grouping, competition, leagueLabel, selectedDate, rule = null, ruleIndex = 0) {
+function normalizeMatch(event, grouping, competition, leagueLabel, selectedDate, slot = null) {
   const competitors = competition?.competitors ?? [];
   const home = competitors.find((item) => item.homeAway === "home") || competitors[0];
   const away = competitors.find((item) => item.homeAway === "away") || competitors[1];
-  const round = competition?.round?.displayName || grouping?.grouping?.displayName || grouping?.displayName || "Match";
+  const round = competition?.round?.displayName || grouping?.grouping?.displayName || grouping?.displayName || slot?.title || "Match";
   const tournament = event?.name || event?.shortName || "Tennis";
   const espnStart = competition?.date || competition?.startDate || event?.date || null;
   const names = broadcastNames(competition, event);
 
   let startTime = espnStart;
-  if (rule && (!startTime || isMidnightPlaceholder(startTime))) {
-    const time = rule.times[Math.min(ruleIndex, rule.times.length - 1)];
-    startTime = easternIso(selectedDate, time);
+  if (slot && (!startTime || isMidnightPlaceholder(startTime))) {
+    startTime = easternIso(selectedDate, slot.time);
   }
 
-  const networks = names.length ? names : (rule?.networks || []);
+  const networks = names.length ? names : (slot?.networks || []);
 
   return {
     id: competition?.id || `${event?.id || tournament}-${round}-${startTime || ""}`,
@@ -200,10 +222,36 @@ function normalizeMatch(event, grouping, competition, leagueLabel, selectedDate,
   };
 }
 
+function coverageFallback(date, rule, slot, index) {
+  return {
+    id: `us-open-${date}-${rule.league}-${rule.terms.join("-")}-${index}`,
+    sport: "Tennis",
+    league: rule.league,
+    name: `US Open — ${slot.title}`,
+    away: "US Open",
+    home: slot.title,
+    awayTeamId: null,
+    homeTeamId: null,
+    startTime: easternIso(date, slot.time),
+    status: "Scheduled",
+    network: unique(slot.networks).join(", "),
+    venue: "USTA Billie Jean King National Tennis Center",
+    division: null,
+    conferences: { away: { id: null, name: null }, home: { id: null, name: null } },
+    conferenceIds: [],
+    awayRank: null,
+    homeRank: null,
+    tournament: "US Open",
+    round: slot.title,
+    matchType: slot.title,
+    isCoveragePlaceholder: true
+  };
+}
+
 async function fetchLeague(league, date) {
   const url = `https://site.api.espn.com/apis/site/v2/sports/tennis/${league}/scoreboard?dates=${date}`;
   const response = await fetch(url, {
-    headers: { accept: "application/json", "user-agent": "WTG/0.1H8n" }
+    headers: { accept: "application/json", "user-agent": "WTG/0.1H8o" }
   });
   if (!response.ok) throw new Error(`ESPN Tennis ${league} request failed: ${response.status}`);
   return response.json();
@@ -212,6 +260,12 @@ async function fetchLeague(league, date) {
 function matchesForDate(data, date, leagueLabel) {
   const ordinary = [];
   const usOpenByRule = new Map();
+  const dayRules = (US_OPEN_DAY_RULES[date] || []).filter((rule) => rule.league === leagueLabel);
+
+  for (const rule of dayRules) {
+    const key = `${rule.league}|${rule.terms.join("|")}`;
+    usOpenByRule.set(key, { rule, items: [] });
+  }
 
   for (const event of data?.events ?? []) {
     const isUsOpen = `${event?.name || ""} ${event?.shortName || ""}`.toLowerCase().includes("us open");
@@ -221,27 +275,32 @@ function matchesForDate(data, date, leagueLabel) {
         const rawDate = competition?.date || competition?.startDate || event?.date;
         if (easternDateKey(rawDate) !== date) continue;
 
-        // Do not render half-built bracket cards such as "Khachanov vs TBD".
-        if (!completeCompetitors(competition)) continue;
-
-        if (isUsOpen && US_OPEN_DAY_RULES[date]) {
+        if (isUsOpen && dayRules.length) {
           const rule = getUsOpenRule(date, leagueLabel, event, grouping, competition);
           if (!rule) continue;
-          const key = `${rule.league}|${rule.terms.join("|")}`;
-          if (!usOpenByRule.has(key)) usOpenByRule.set(key, { rule, items: [] });
-          usOpenByRule.get(key).items.push({ event, grouping, competition });
+          if (completeCompetitors(competition)) {
+            const key = `${rule.league}|${rule.terms.join("|")}`;
+            usOpenByRule.get(key)?.items.push({ event, grouping, competition });
+          }
           continue;
         }
 
+        // Outside official late-round US Open fallbacks, do not render
+        // half-built bracket cards such as "player vs TBD".
+        if (!completeCompetitors(competition)) continue;
         ordinary.push(normalizeMatch(event, grouping, competition, leagueLabel, date));
       }
     }
   }
 
   for (const { rule, items } of usOpenByRule.values()) {
-    const limit = rule.times.length;
-    items.slice(0, limit).forEach((item, index) => {
-      ordinary.push(normalizeMatch(item.event, item.grouping, item.competition, leagueLabel, date, rule, index));
+    // Preserve ESPN match order and attach each complete matchup to its
+    // official session slot. If ESPN has not populated that bracket slot yet,
+    // keep the official viewing session visible as a coverage card.
+    rule.slots.forEach((slot, index) => {
+      const item = items[index];
+      if (item) ordinary.push(normalizeMatch(item.event, item.grouping, item.competition, leagueLabel, date, slot));
+      else ordinary.push(coverageFallback(date, rule, slot, index));
     });
   }
 
