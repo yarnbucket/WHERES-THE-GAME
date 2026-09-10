@@ -894,6 +894,12 @@
 
 .game-card{cursor:pointer}
 .game-card .favorite,.game-card a,.game-card button{cursor:pointer}
+.game-card.loved-team-colors{background:linear-gradient(125deg,var(--team-primary),color-mix(in srgb,var(--team-primary) 58%,#000));border-color:var(--team-secondary);box-shadow:0 13px 28px rgba(0,0,0,.48),0 0 0 1px color-mix(in srgb,var(--team-secondary) 30%,transparent),0 0 22px color-mix(in srgb,var(--team-secondary) 22%,transparent)}
+.game-card.loved-team-colors:before{box-shadow:inset 0 2px 0 color-mix(in srgb,var(--team-secondary) 55%,transparent),inset 0 0 28px color-mix(in srgb,var(--team-secondary) 8%,transparent)}
+.game-card.loved-team-colors .game-sport,.game-card.loved-team-colors .game-time,.game-card.loved-team-colors .directv-label,.game-card.loved-team-colors .team-rank{color:var(--team-secondary)}
+.game-card.loved-team-colors .team-copy strong,.game-card.loved-team-colors .game-network,.game-card.loved-team-colors .directv-note{color:var(--team-text)}
+.game-card.loved-team-colors .team-mark{color:var(--team-mark-text);background:linear-gradient(145deg,var(--team-secondary),color-mix(in srgb,var(--team-secondary) 75%,#000));border-color:var(--team-text);box-shadow:inset 0 1px 0 rgba(255,255,255,.65),0 7px 16px rgba(0,0,0,.35)}
+.game-card.loved-team-colors .directv-box{background:linear-gradient(160deg,var(--team-primary),color-mix(in srgb,var(--team-primary) 45%,#000));border-color:var(--team-secondary)}
 
 /* 0.1H8i — Weekly AP Top 25 Team-ID Join + Search + Profiles */
 .profile-settings-block h3,.favorite-sports-profile-block h3,.notification-profile-block h3{margin:8px 0;color:#f5fbff;font-size:16px;letter-spacing:.02em}
@@ -1086,6 +1092,8 @@
       <div class="favorite-sports-grid" id="favoriteSportsGrid"></div>
     </div></details>
 
+    <details class="settings-fold"><summary><span>GAME CARD COLORS</span><span class="settings-count" id="cardThemeSummary">DEFAULT</span></summary><div class="settings-fold-body"><p class="settings-copy">Use the standard WTG layout or apply verified colors from the LOVE team in each matchup.</p><div class="provider-options" id="cardThemeOptions"><button type="button" data-card-theme="default">DEFAULT</button><button type="button" data-card-theme="loved">LOVED TEAM COLORS</button></div></div></details>
+
     <div class="settings-divider"></div>
     <div class="viewing-mode-settings-block">
       <h3>Viewing Mode</h3>
@@ -1123,7 +1131,7 @@
     </div>
     <div class="sports-settings" id="sportsSettings"></div>
     </div></details>
-    <p class="settings-foot">0.1H9a adds compact profile controls, collapsible preference counts and selected-date game counters. Profiles remain stored locally on this device.</p>
+    <p class="settings-foot">0.1H9b hides placeholder rankings outside the Top 25 and adds profile-selectable LOVE-team card palettes with safe default fallback.</p>
   </section>
 </div>
 
@@ -1186,6 +1194,7 @@ const ACTIVE_PROFILE_KEY="wtg-active-profile-v1";
 
 const PROFILE_PROVIDERS=new Set(["directv","xfinity","fios","sling","streaming"]);
 const PROFILE_VIEWING_MODES=new Set(["standard","national","local"]);
+const TEAM_PALETTE_OVERRIDES={"pittsburgh pirates":{primary:"#27251F",secondary:"#FDB827",logo:"",id:"23",sportKey:"mlb",league:"MLB"}};
 
 function currentProfileDefaults(){
   let visibleSports=null;
@@ -1195,6 +1204,7 @@ function currentProfileDefaults(){
     provider:PROFILE_PROVIDERS.has(localStorage.getItem(PROVIDER_PREFS_KEY))?localStorage.getItem(PROVIDER_PREFS_KEY):"directv",
     viewingMode:PROFILE_VIEWING_MODES.has(localStorage.getItem(VIEWING_MODE_PREFS_KEY))?localStorage.getItem(VIEWING_MODE_PREFS_KEY):"standard",
     visibleSports:Array.isArray(visibleSports)?visibleSports.filter(id=>SPORT_CATALOG.some(s=>s.id===id)):SPORT_CATALOG.filter(s=>s.defaultOn).map(s=>s.id),
+    cardTheme:"default",teamPalettes:{},
     notifications:{enabled:false,confirmedViewingOnly:true,rivalryAlerts:true}
   };
 }
@@ -1210,6 +1220,8 @@ function normalizeProfile(profile,name){
     provider:PROFILE_PROVIDERS.has(profile?.provider)?profile.provider:defaults.provider,
     viewingMode:PROFILE_VIEWING_MODES.has(profile?.viewingMode)?profile.viewingMode:defaults.viewingMode,
     visibleSports:Array.isArray(profile?.visibleSports)?profile.visibleSports.filter(id=>SPORT_CATALOG.some(s=>s.id===id)):defaults.visibleSports,
+    cardTheme:profile?.cardTheme==="loved"?"loved":"default",
+    teamPalettes:profile?.teamPalettes&&typeof profile.teamPalettes==="object"?profile.teamPalettes:{},
     notifications:{
       enabled:notifications.enabled===true,
       confirmedViewingOnly:notifications.confirmedViewingOnly!==false,
@@ -1276,6 +1288,8 @@ function saveActiveProfile(profile){
     provider:PROFILE_PROVIDERS.has(profile.provider)?profile.provider:"directv",
     viewingMode:PROFILE_VIEWING_MODES.has(profile.viewingMode)?profile.viewingMode:"standard",
     visibleSports:[...new Set((profile.visibleSports||[]).filter(id=>SPORT_CATALOG.some(s=>s.id===id)))],
+    cardTheme:profile.cardTheme==="loved"?"loved":"default",
+    teamPalettes:profile.teamPalettes&&typeof profile.teamPalettes==="object"?profile.teamPalettes:{},
     notifications:{
       enabled:profile.notifications?.enabled===true,
       confirmedViewingOnly:profile.notifications?.confirmedViewingOnly!==false,
@@ -1290,7 +1304,7 @@ function createProfile(name){
   if(!cleaned)return false;
   const profiles=readProfiles();
   if(profiles[cleaned])return false;
-  profiles[cleaned]={name:cleaned,loveTeams:[],hateTeams:[],favoriteSports:[],provider:"directv",viewingMode:"standard",visibleSports:SPORT_CATALOG.filter(s=>s.defaultOn).map(s=>s.id),notifications:{enabled:false,confirmedViewingOnly:true,rivalryAlerts:true}};
+  profiles[cleaned]={name:cleaned,loveTeams:[],hateTeams:[],favoriteSports:[],provider:"directv",viewingMode:"standard",visibleSports:SPORT_CATALOG.filter(s=>s.defaultOn).map(s=>s.id),cardTheme:"default",teamPalettes:{},notifications:{enabled:false,confirmedViewingOnly:true,rivalryAlerts:true}};
   writeProfiles(profiles);
   return cleaned;
 }
@@ -1718,6 +1732,7 @@ const profileNameInput=document.getElementById("profileNameInput"),profileSaveSt
 profileAlertsEnabled=document.getElementById("profileAlertsEnabled"),profileConfirmedOnly=document.getElementById("profileConfirmedOnly"),profileRivalryAlerts=document.getElementById("profileRivalryAlerts");
 const teamPickerSearch=document.getElementById("teamPickerSearch"),teamPickerStatus=document.getElementById("teamPickerStatus"),teamPickerResults=document.getElementById("teamPickerResults");
 const profileSummaryCount=document.getElementById("profileSummaryCount"),teamPreferenceCount=document.getElementById("teamPreferenceCount"),favoriteSportCount=document.getElementById("favoriteSportCount"),visibleSportCount=document.getElementById("visibleSportCount"),selectedDateGamesCount=document.getElementById("selectedDateGamesCount"),loveGamesCount=document.getElementById("loveGamesCount"),favoriteGamesCount=document.getElementById("favoriteGamesCount"),hiddenHateGamesCount=document.getElementById("hiddenHateGamesCount");
+const cardThemeOptions=document.getElementById("cardThemeOptions"),cardThemeSummary=document.getElementById("cardThemeSummary");
 let teamPickerMatches=[],teamPickerTimer=null,teamPickerRequest=0;
 
 let profileSavedTimer=null;
@@ -1872,6 +1887,8 @@ function renderProfileSettings(){
   if(teamPreferenceCount)teamPreferenceCount.textContent=String((p.loveTeams||[]).length+(p.hateTeams||[]).length);
   if(favoriteSportCount)favoriteSportCount.textContent=String((p.favoriteSports||[]).length);
   if(visibleSportCount)visibleSportCount.textContent=`${getVisibleSportIds().length} visible`;
+  if(cardThemeSummary)cardThemeSummary.textContent=p.cardTheme==="loved"?"LOVED TEAM COLORS":"DEFAULT";
+  cardThemeOptions?.querySelectorAll("[data-card-theme]").forEach(button=>button.classList.toggle("active",button.dataset.cardTheme===p.cardTheme));
   renderTeamPickerResults();
   updateProfileGameCounts();
 }
@@ -1905,14 +1922,21 @@ async function searchTeamDirectory(){
     renderTeamPickerResults();
   }catch(error){if(request!==teamPickerRequest)return;console.error(error);teamPickerStatus.textContent="Team search is temporarily unavailable.";}
 }
+function normalizeTeamColor(value){const hex=String(value||"").replace(/^#/,"").trim();return /^[0-9a-f]{6}$/i.test(hex)?`#${hex.toUpperCase()}`:null}
 function setTeamPreference(team,type,checked){
-  const p={...getActiveProfile(),loveTeams:[...(getActiveProfile().loveTeams||[])],hateTeams:[...(getActiveProfile().hateTeams||[])]};
-  const target=type==="love"?"loveTeams":"hateTeams",opposite=type==="love"?"hateTeams":"loveTeams",key=normalizeTeamName(team);
+  const teamData=typeof team==="string"?{name:team}:team;
+  const teamName=teamData.name;
+  const active=getActiveProfile();
+  const p={...active,loveTeams:[...(active.loveTeams||[])],hateTeams:[...(active.hateTeams||[])],teamPalettes:{...(active.teamPalettes||{})}};
+  const target=type==="love"?"loveTeams":"hateTeams",opposite=type==="love"?"hateTeams":"loveTeams",key=normalizeTeamName(teamName);
   p[target]=p[target].filter(name=>normalizeTeamName(name)!==key);
   p[opposite]=p[opposite].filter(name=>normalizeTeamName(name)!==key);
-  if(checked)p[target].push(team);
+  if(checked)p[target].push(teamName);
+  const primary=normalizeTeamColor(teamData.color),secondary=normalizeTeamColor(teamData.alternateColor);
+  if(primary&&secondary)p.teamPalettes[key]={id:String(teamData.id||""),sportKey:teamData.sportKey||"",league:teamData.league||"",primary,secondary,logo:teamData.logo||""};
   saveActiveProfile(p);renderProfileSettings();renderSportTabs();favoritesOnly?loadFavorites():loadGames();
 }
+function applyCardTheme(theme){saveCurrentProfileSettings({cardTheme:theme==="loved"?"loved":"default"});renderProfileSettings();favoritesOnly?loadFavorites():loadGames()}
 function saveProfileNotifications(){
   saveCurrentProfileSettings({notifications:{
     enabled:profileAlertsEnabled.checked,
@@ -2338,7 +2362,7 @@ function isCollegeSport(gameOrSport){
 
 function numericRank(value){
   if(value==null)return null;
-  if(typeof value==="number"&&Number.isFinite(value)&&value>0&&value<=99)return Math.trunc(value);
+  if(typeof value==="number"&&Number.isFinite(value)&&value>0&&value<=25)return Math.trunc(value);
   if(typeof value==="object"){
     for(const key of ["rank","current","ranking","apRank","pollRank","value"]){
       const n=numericRank(value[key]);
@@ -2349,7 +2373,7 @@ function numericRank(value){
   const m=String(value).match(/#?\s*(\d{1,2})/);
   if(!m)return null;
   const n=Number(m[1]);
-  return n>0&&n<=99?n:null;
+  return n>0&&n<=25?n:null;
 }
 
 
@@ -3187,9 +3211,25 @@ function teamParts(name){
   if(words.length<=1)return {small:"",big:name||"TBD"};
   return {small:words.slice(0,-1).join(" "),big:words[words.length-1]};
 }
+function readableTextColor(hex){
+  const value=normalizeTeamColor(hex);if(!value)return "#FFFFFF";
+  const [r,g,b]=[1,3,5].map(i=>parseInt(value.slice(i,i+2),16));
+  return (r*299+g*587+b*114)/1000>150?"#111111":"#FFFFFF";
+}
+function lovedTeamCardPalette(game){
+  const p=getActiveProfile();if(p.cardTheme!=="loved")return null;
+  const love=p.loveTeams||[];
+  const sideMatch=side=>love.find(team=>profileTeamMatch({[side]:game?.[side],[`${side}Team`]:game?.[`${side}Team`]},team));
+  const team=sideMatch("home")||sideMatch("away");if(!team)return null;
+  const key=normalizeTeamName(team),stored=p.teamPalettes?.[key],override=TEAM_PALETTE_OVERRIDES[key];
+  const primary=normalizeTeamColor(stored?.primary||override?.primary),secondary=normalizeTeamColor(stored?.secondary||override?.secondary);
+  if(!primary||!secondary)return null;
+  return {primary,secondary,text:readableTextColor(primary),markText:readableTextColor(secondary)};
+}
 function renderGame(game,conflictKeys){
   const d=getViewingSourceDisplay(game,conflictKeys),favorite=isFavorite(game.id);
   const affinity=profileAffinity(game),notificationPrefs=getActiveProfile().notifications||{};
+  const teamPalette=lovedTeamCardPalette(game);
   const hasTeams=game.away&&game.home;
   const baseSportLabel=sportLabels[game?._sportKey]||game.sport||sportLabels[selectedSport]||"Sports";
   const confirmedSource=Boolean((game.broadcast||game.network||"").trim())&&!/unavailable|tbd|not assigned/i.test(`${game.broadcast||game.network||""} ${d.channel||""}`);
@@ -3219,7 +3259,8 @@ function renderGame(game,conflictKeys){
     main=`<div class="event-title">${eventTitle}</div>`;
   }
 
-  return `<article class="game-card">
+  const themeStyle=teamPalette?` style="--team-primary:${teamPalette.primary};--team-secondary:${teamPalette.secondary};--team-text:${teamPalette.text};--team-mark-text:${teamPalette.markText}"`:"";
+  return `<article class="game-card${teamPalette?" loved-team-colors":""}"${themeStyle}>
     <div class="card-main">
       <div class="card-top">
         <span class="game-sport">${sportLine}</span>
@@ -3353,8 +3394,10 @@ teamPickerSearch?.addEventListener("input",()=>{clearTimeout(teamPickerTimer);te
 teamPickerResults?.addEventListener("change",event=>{
   const input=event.target.closest("input[data-team-choice]");
   if(!input)return;
-  setTeamPreference(decodeURIComponent(input.dataset.teamName),input.dataset.teamChoice,input.checked);
+  const name=decodeURIComponent(input.dataset.teamName);
+  setTeamPreference(teamPickerMatches.find(team=>normalizeTeamName(team.name)===normalizeTeamName(name))||name,input.dataset.teamChoice,input.checked);
 });
+cardThemeOptions?.addEventListener("click",event=>{const button=event.target.closest("[data-card-theme]");if(button)applyCardTheme(button.dataset.cardTheme)});
 
 viewingModeOptions?.addEventListener("click",e=>{
   const btn=e.target.closest("[data-viewing-mode]");

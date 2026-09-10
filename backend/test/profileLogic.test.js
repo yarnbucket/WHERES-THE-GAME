@@ -58,3 +58,18 @@ test("compact profile controls require explicit loading and expose preference co
     assert.match(html,new RegExp(`id="${id}"`));
   }
 });
+
+test("only valid Top 25 rankings are displayed",()=>{
+  const context={};vm.createContext(context);vm.runInContext(functionSource("numericRank"),context);
+  assert.equal(context.numericRank(1),1);
+  assert.equal(context.numericRank("#25"),25);
+  assert.equal(context.numericRank(26),null);
+  assert.equal(context.numericRank("#99"),null);
+});
+
+test("profiles can apply verified LOVE-team colors with a default fallback",()=>{
+  assert.match(html,/id="cardThemeOptions"/);
+  assert.match(html,/function lovedTeamCardPalette/);
+  assert.match(html,/\.game-card\.loved-team-colors/);
+  for(const color of ["#27251F","#FDB827","#FFFFFF"])assert.match(html,new RegExp(color,"i"));
+});

@@ -493,7 +493,9 @@ async function getTeamDirectory(){
         id:String(team.id),sportKey,league:league.label||config.label,
         name:team.displayName||team.name,
         abbreviation:team.abbreviation||"",
-        logo:team.logos?.[0]?.href||team.logo||""
+        logo:team.logos?.[0]?.href||team.logo||"",
+        color:String(team.color||"").replace(/^#/,""),
+        alternateColor:String(team.alternateColor||"").replace(/^#/,"")
       }));
     });
   }));
