@@ -937,6 +937,7 @@
 .team-picker-search{display:flex;gap:8px;margin-top:10px}.team-picker-search input{flex:1;min-width:0;border:1px solid #315d79;background:#071f31;color:#f5fbff;border-radius:11px;padding:12px;font-size:15px;font-weight:750}
 .team-picker-results{display:grid;gap:7px;margin-top:10px;max-height:360px;overflow:auto}.team-picker-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:10px 11px;border:1px solid #315d79;border-radius:12px;background:rgba(4,24,39,.62)}
 .team-picker-name{display:flex;align-items:center;gap:9px;min-width:0}.team-picker-name img{width:30px;height:30px;object-fit:contain}.team-picker-name strong,.team-picker-name small{display:block}.team-picker-name strong{color:#f5fbff;font-size:13px}.team-picker-name small{color:#91a8ba;font-size:10px;margin-top:2px}.team-choice{display:flex;align-items:center;gap:4px;color:#bcd3e2;font-size:11px;font-weight:900}.team-choice input{width:19px;height:19px;accent-color:#1598e5}.team-choice.hate input{accent-color:#df625a}.team-picker-status{margin:8px 0 0;color:#91a8ba;font-size:11px}
+.settings-fold{border:1px solid rgba(49,93,121,.75);border-radius:14px;background:rgba(4,24,39,.42);margin:9px 0;overflow:hidden}.settings-fold>summary{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:13px;color:#f5fbff;font-size:14px;font-weight:900;cursor:pointer;list-style:none}.settings-fold>summary::-webkit-details-marker{display:none}.settings-fold>summary:after{content:"⌄";color:#70cfff}.settings-fold[open]>summary:after{content:"⌃"}.settings-fold-body{padding:0 12px 12px}.settings-count{color:#91b4c9;font-size:11px;white-space:nowrap}.daily-profile-counts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:8px 0 12px}.daily-count{padding:10px;border:1px solid #315d79;border-radius:11px;background:#061b2a}.daily-count strong,.daily-count span{display:block}.daily-count strong{font-size:18px;color:#f5fbff}.daily-count span{font-size:9px;color:#91a8ba;letter-spacing:.07em;margin-top:2px}
 @media(max-width:640px){
   .profile-toolbar{grid-template-columns:1fr}
   .profile-preference-grid{grid-template-columns:1fr}
@@ -1036,36 +1037,37 @@
       <button class="settings-close" id="settingsClose" aria-label="Close settings">×</button>
     </div>
 
-    <div class="profile-settings-block">
-      <h3>👤 User Profile</h3>
+    <details class="settings-fold" open>
+      <summary><span>👤 USER PROFILE</span><span class="settings-count" id="profileSummaryCount"></span></summary>
+      <div class="settings-fold-body profile-settings-block">
       <p class="settings-copy">Profiles keep your persistent LOVE teams, HATE teams and favorite sports. Today's ☆ Favorite Games remain separate and still expire the next day.</p>
 
       <div class="profile-toolbar">
         <select id="profileSelect" aria-label="User profile"></select>
         <div class="profile-buttons">
           <button type="button" id="newProfileBtn">NEW</button>
-          <button type="button" id="renameProfileBtn">RENAME</button>
-          <button type="button" id="duplicateProfileBtn">COPY</button>
-          <button type="button" id="deleteProfileBtn" class="danger">DELETE</button>
+          <button type="button" id="loadProfileBtn">LOAD PROFILE</button>
+          <button type="button" id="deleteProfileBtn" class="danger">DELETE PROFILE</button>
         </div>
       </div>
       <div class="profile-name-editor">
         <input id="profileNameInput" placeholder="Profile name…" maxlength="24" autocomplete="off">
-        <span>Enter a name, then choose NEW or RENAME.</span>
+        <span>Enter a name, then choose NEW.</span>
       </div>
       <p class="profile-name-active" id="activeProfileLabel"></p>
       <p class="profile-save-status" id="profileSaveStatus" role="status" aria-live="polite"></p>
+      </div>
+    </details>
+
+    <div class="daily-profile-counts"><div class="daily-count"><strong id="selectedDateGamesCount">0</strong><span>SELECTED-DATE GAMES</span></div><div class="daily-count"><strong id="loveGamesCount">0</strong><span>LOVE GAMES</span></div><div class="daily-count"><strong id="favoriteGamesCount">0</strong><span>DAILY FAVORITES</span></div><div class="daily-count"><strong id="hiddenHateGamesCount">0</strong><span>HATE GAMES HIDDEN</span></div></div>
 
       <div class="profile-pref-card">
-        <h4>❤️ LOVE / 💢 HATE TEAMS</h4>
+        <h4>SEARCH TEAMS</h4>
         <div class="team-picker-search"><input id="teamPickerSearch" placeholder="Search teams…" autocomplete="off" aria-label="Search teams"></div>
         <p class="team-picker-status" id="teamPickerStatus">Type at least two letters to search every supported team.</p>
         <div class="team-picker-results" id="teamPickerResults"></div>
-        <div class="team-chip-wrap" id="loveTeamChips"></div>
-        <div class="team-chip-wrap" id="hateTeamChips"></div>
       </div>
-      <p class="profile-help">Check LOVE or HATE. If neither box is checked, the team is NORMAL. Selecting one automatically clears the other.</p>
-    </div>
+      <details class="settings-fold"><summary><span>❤️ LOVE / 💢 HATE TEAMS</span><span class="settings-count" id="teamPreferenceCount">0</span></summary><div class="settings-fold-body"><div class="team-chip-wrap" id="loveTeamChips"></div><div class="team-chip-wrap" id="hateTeamChips"></div><p class="profile-help">Neither selected means NORMAL. Selecting one clears the other.</p></div></details>
 
     <div class="settings-divider"></div>
 
@@ -1079,11 +1081,10 @@
 
     <div class="settings-divider"></div>
 
-    <div class="favorite-sports-profile-block">
-      <h3>⭐ Favorite Sports</h3>
+    <details class="settings-fold"><summary><span>⭐ FAVORITE SPORTS</span><span class="settings-count" id="favoriteSportCount">0</span></summary><div class="settings-fold-body favorite-sports-profile-block">
       <p class="settings-copy">Choose the sports this profile craves. Favorite sports move ahead of other sport tabs and add preference inside the existing pro/college hierarchy.</p>
       <div class="favorite-sports-grid" id="favoriteSportsGrid"></div>
-    </div>
+    </div></details>
 
     <div class="settings-divider"></div>
     <div class="viewing-mode-settings-block">
@@ -1114,14 +1115,15 @@
 
     <div class="settings-divider"></div>
 
-    <h3 class="sports-settings-title">Sports</h3>
+    <details class="settings-fold"><summary><span>SPORT TABS</span><span class="settings-count" id="visibleSportCount"></span></summary><div class="settings-fold-body"><h3 class="sports-settings-title">Sports</h3>
     <p class="settings-copy">Choose which sports appear across the top of Where's the Game. Hidden sports stay available and can be turned back on anytime.</p>
     <div class="settings-actions">
       <button id="showAllSports">Show all</button>
       <button id="coreSportsOnly">Core sports</button>
     </div>
     <div class="sports-settings" id="sportsSettings"></div>
-    <p class="settings-foot">0.1H9 adds searchable LOVE/HATE team checkboxes. Unchecked teams are NORMAL, and HATE games stay hidden unless a LOVE team is also playing.</p>
+    </div></details>
+    <p class="settings-foot">0.1H9a adds compact profile controls, collapsible preference counts and selected-date game counters. Profiles remain stored locally on this device.</p>
   </section>
 </div>
 
@@ -1288,10 +1290,9 @@ function createProfile(name){
   if(!cleaned)return false;
   const profiles=readProfiles();
   if(profiles[cleaned])return false;
-  profiles[cleaned]={name:cleaned,...currentProfileDefaults()};
+  profiles[cleaned]={name:cleaned,loveTeams:[],hateTeams:[],favoriteSports:[],provider:"directv",viewingMode:"standard",visibleSports:SPORT_CATALOG.filter(s=>s.defaultOn).map(s=>s.id),notifications:{enabled:false,confirmedViewingOnly:true,rivalryAlerts:true}};
   writeProfiles(profiles);
-  localStorage.setItem(ACTIVE_PROFILE_KEY,cleaned);
-  return true;
+  return cleaned;
 }
 function renameActiveProfile(name){
   const cleaned=cleanTeamName(name).toUpperCase();
@@ -1348,6 +1349,13 @@ function profileAffinityScore(game){
   if(love)return 8000;
   if(hate)return 7000;
   return 0;
+}
+function deleteProfile(name){
+  const profiles=readProfiles(),active=getActiveProfileName();
+  if(Object.keys(profiles).length<=1||!profiles[name])return false;
+  delete profiles[name];writeProfiles(profiles);
+  if(name===active){localStorage.setItem(ACTIVE_PROFILE_KEY,Object.keys(profiles)[0]);applyProfilePreferences(getActiveProfile())}
+  return true;
 }
 function profileAllowsGame(game){
   const {love,hate}=profileAffinity(game);
@@ -1693,10 +1701,12 @@ function viewingModeMatches(game){
   return true;
 }
 function filterGamesForViewingMode(games){
-  return (Array.isArray(games)?games:[]).filter(viewingModeMatches).filter(profileAllowsGame);
+  const modeGames=(Array.isArray(games)?games:[]).filter(viewingModeMatches);
+  lastUnfilteredProfileGames=modeGames;
+  return modeGames.filter(profileAllowsGame);
 }
 
-let selectedSport="whats-on", selectedDate=new Date(), favoritesOnly=false, currentGames=[], currentNcaafRankingMeta=null;
+let selectedSport="whats-on", selectedDate=new Date(), favoritesOnly=false, currentGames=[], currentNcaafRankingMeta=null,lastUnfilteredProfileGames=[];
 let serverTimeBaseMs=null, serverTimePerfBase=null;
 const gamesList=document.getElementById("gamesList"), statusBox=document.getElementById("status"), scheduleTitle=document.getElementById("scheduleTitle"), dateLabel=document.getElementById("dateLabel"), todayNav=document.getElementById("todayNav"), favoritesNav=document.getElementById("favoritesNav"), currentTimeEl=document.getElementById("currentTime"), remainingGamesEl=document.getElementById("remainingGames"), sportTabs=document.getElementById("sportTabs"), settingsBackdrop=document.getElementById("settingsBackdrop"), sportsSettings=document.getElementById("sportsSettings"), providerOptions=document.getElementById("providerOptions"), providerNote=document.getElementById("providerNote"), viewingModeOptions=document.getElementById("viewingModeOptions"), viewingModeNote=document.getElementById("viewingModeNote"),
 profileSelect=document.getElementById("profileSelect"), activeProfileLabel=document.getElementById("activeProfileLabel"),
@@ -1707,6 +1717,7 @@ gameSearchInput=document.getElementById("gameSearchInput"), gameSearchClear=docu
 const profileNameInput=document.getElementById("profileNameInput"),profileSaveStatus=document.getElementById("profileSaveStatus"),
 profileAlertsEnabled=document.getElementById("profileAlertsEnabled"),profileConfirmedOnly=document.getElementById("profileConfirmedOnly"),profileRivalryAlerts=document.getElementById("profileRivalryAlerts");
 const teamPickerSearch=document.getElementById("teamPickerSearch"),teamPickerStatus=document.getElementById("teamPickerStatus"),teamPickerResults=document.getElementById("teamPickerResults");
+const profileSummaryCount=document.getElementById("profileSummaryCount"),teamPreferenceCount=document.getElementById("teamPreferenceCount"),favoriteSportCount=document.getElementById("favoriteSportCount"),visibleSportCount=document.getElementById("visibleSportCount"),selectedDateGamesCount=document.getElementById("selectedDateGamesCount"),loveGamesCount=document.getElementById("loveGamesCount"),favoriteGamesCount=document.getElementById("favoriteGamesCount"),hiddenHateGamesCount=document.getElementById("hiddenHateGamesCount");
 let teamPickerMatches=[],teamPickerTimer=null,teamPickerRequest=0;
 
 let profileSavedTimer=null;
@@ -1857,18 +1868,29 @@ function renderProfileSettings(){
   profileAlertsEnabled.checked=p.notifications?.enabled===true;
   profileConfirmedOnly.checked=p.notifications?.confirmedViewingOnly!==false;
   profileRivalryAlerts.checked=p.notifications?.rivalryAlerts!==false;
+  if(profileSummaryCount)profileSummaryCount.textContent=`ACTIVE: ${active}`;
+  if(teamPreferenceCount)teamPreferenceCount.textContent=String((p.loveTeams||[]).length+(p.hateTeams||[]).length);
+  if(favoriteSportCount)favoriteSportCount.textContent=String((p.favoriteSports||[]).length);
+  if(visibleSportCount)visibleSportCount.textContent=`${getVisibleSportIds().length} visible`;
   renderTeamPickerResults();
+  updateProfileGameCounts();
 }
 function renderTeamPickerResults(){
   if(!teamPickerResults)return;
   const p=getActiveProfile(),love=new Set((p.loveTeams||[]).map(normalizeTeamName)),hate=new Set((p.hateTeams||[]).map(normalizeTeamName));
-  const saved=[...(p.loveTeams||[]),...(p.hateTeams||[])].map(name=>({name,league:"Saved team",sportKey:"",logo:""}));
   const seen=new Set();
-  const teams=[...saved,...teamPickerMatches].filter(team=>{const key=normalizeTeamName(team.name);if(!key||seen.has(key))return false;seen.add(key);return true});
+  const teams=teamPickerMatches.filter(team=>{const key=normalizeTeamName(team.name);if(!key||seen.has(key))return false;seen.add(key);return true});
   teamPickerResults.innerHTML=teams.map(team=>{
     const key=normalizeTeamName(team.name),encoded=encodeURIComponent(team.name);
     return `<div class="team-picker-row"><div class="team-picker-name">${team.logo?`<img src="${escapeHtml(team.logo)}" alt="">`:""}<span><strong>${escapeHtml(team.name)}</strong><small>${escapeHtml(team.league||team.sportKey||"")}</small></span></div><label class="team-choice"><input type="checkbox" data-team-choice="love" data-team-name="${encoded}" ${love.has(key)?"checked":""}> LOVE</label><label class="team-choice hate"><input type="checkbox" data-team-choice="hate" data-team-name="${encoded}" ${hate.has(key)?"checked":""}> HATE</label></div>`;
   }).join("");
+}
+function updateProfileGameCounts(){
+  const shown=Array.isArray(currentGames)?currentGames:[],raw=Array.isArray(lastUnfilteredProfileGames)?lastUnfilteredProfileGames:[];
+  if(selectedDateGamesCount)selectedDateGamesCount.textContent=String(shown.length);
+  if(loveGamesCount)loveGamesCount.textContent=String(shown.filter(game=>profileAffinity(game).love).length);
+  if(favoriteGamesCount)favoriteGamesCount.textContent=String(shown.filter(game=>isFavorite(game.id)).length);
+  if(hiddenHateGamesCount)hiddenHateGamesCount.textContent=String(raw.filter(game=>{const a=profileAffinity(game);return a.hate&&!a.love}).length);
 }
 async function searchTeamDirectory(){
   const query=teamPickerSearch.value.trim(),request=++teamPickerRequest;
@@ -2017,7 +2039,7 @@ function statusText(game){const s=game?.status;if(typeof s==="string")return s.t
 function isFinalGame(game){const s=statusText(game);return s.includes("final")||s.includes("completed")||s.includes("post")&&s.includes("game")||game?.status?.type?.completed===true||game?.completed===true}
 function isLiveGame(game){const s=statusText(game);return s.includes("in progress")||s.includes("inprogress")||s.includes("live")||s.includes("halftime")||s.includes("intermission")||s.includes("end of")||s.includes("quarter")||s.includes("period")||s.includes("inning")||game?.status?.type?.state==="in"}
 function remainingGameCount(){const serverNow=getCurrentServerTime();const now=serverNow?serverNow.getTime():Date.now();return currentGames.filter(game=>{if(isFinalGame(game))return false;if(isLiveGame(game))return true;const start=Date.parse(game?.startTime||"");return Number.isFinite(start)?start>now:true}).length}
-function updateDateMeta(){currentTimeEl.textContent=formatCurrentEasternTime();remainingGamesEl.textContent=`Remaining games: ${remainingGameCount()}`}
+function updateDateMeta(){currentTimeEl.textContent=formatCurrentEasternTime();remainingGamesEl.textContent=`Remaining games: ${remainingGameCount()}`;updateProfileGameCounts()}
 function easternDateKey(date=new Date()){return new Intl.DateTimeFormat("en-CA",{timeZone:EASTERN_TZ,year:"numeric",month:"2-digit",day:"2-digit"}).format(date)}
 function getFavorites(){try{const raw=JSON.parse(localStorage.getItem("wtg-live-favorites")||"[]");if(!Array.isArray(raw))return[];const today=easternDateKey();const kept=raw.filter(item=>{const savedDay=item?._wtgFavoriteDay;if(savedDay)return savedDay===today;if(item?.startTime)return easternDateKey(new Date(item.startTime))===today;return false});if(kept.length!==raw.length)saveFavorites(kept);return kept}catch{return[]}}
 function saveFavorites(items){localStorage.setItem("wtg-live-favorites",JSON.stringify(items))}
@@ -3290,47 +3312,30 @@ providerOptions?.addEventListener("click",e=>{
 });
 
 
-profileSelect?.addEventListener("change",()=>{
-  const name=profileSelect.value;
-  if(!activateProfile(name))return;
-  renderProfileSettings();
-  renderViewingModeSettings();
-  renderProviderSettings();
-  renderSportsSettings();
-  renderSportTabs();
-  loadGames();
+profileSelect?.addEventListener("change",()=>{profileSaveStatus.textContent=profileSelect.value===getActiveProfileName()?"This profile is active.":`Press LOAD PROFILE to use ${profileSelect.value}.`});
+document.getElementById("loadProfileBtn")?.addEventListener("click",()=>{
+  if(!activateProfile(profileSelect.value))return;
+  renderProfileSettings();renderViewingModeSettings();renderProviderSettings();renderSportsSettings();renderSportTabs();showProfileSaved();loadGames();
 });
 document.getElementById("newProfileBtn")?.addEventListener("click",()=>{
   const name=profileNameInput.value;
-  if(!createProfile(name)){
+  const created=createProfile(name);
+  if(!created){
     profileSaveStatus.textContent="Enter a unique profile name.";
     return;
   }
-  applyProfilePreferences(getActiveProfile());
   renderProfileSettings();
-  renderViewingModeSettings();renderProviderSettings();renderSportsSettings();
-  renderSportTabs();
-  showProfileSaved();
-  loadGames();
-});
-document.getElementById("renameProfileBtn")?.addEventListener("click",()=>{
-  if(!renameActiveProfile(profileNameInput.value)){profileSaveStatus.textContent="Enter a unique profile name.";return;}
-  renderProfileSettings();renderSportTabs();showProfileSaved();
-});
-document.getElementById("duplicateProfileBtn")?.addEventListener("click",()=>{
-  if(!duplicateActiveProfile(profileNameInput.value)){profileSaveStatus.textContent="Enter a unique profile name.";return;}
-  applyProfilePreferences(getActiveProfile());
-  renderProfileSettings();renderViewingModeSettings();renderProviderSettings();renderSportsSettings();renderSportTabs();showProfileSaved();loadGames();
+  profileSelect.value=created;
+  profileSaveStatus.textContent=`${created} created. Press LOAD PROFILE to use it.`;
 });
 document.getElementById("deleteProfileBtn")?.addEventListener("click",()=>{
-  const active=getActiveProfileName();
+  const target=profileSelect.value;
   if(Object.keys(readProfiles()).length<=1){
     alert("Keep at least one profile. Create another profile before deleting this one.");
     return;
   }
-  if(!confirm(`Delete profile ${active}?`))return;
-  deleteActiveProfile();
-  applyProfilePreferences(getActiveProfile());
+  if(!confirm(`Delete profile ${target}?`))return;
+  deleteProfile(target);
   renderProfileSettings();
   renderViewingModeSettings();renderProviderSettings();renderSportsSettings();
   renderSportTabs();

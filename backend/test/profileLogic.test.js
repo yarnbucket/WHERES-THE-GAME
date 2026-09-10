@@ -31,7 +31,9 @@ test("HATE games are hidden unless the matchup also includes a LOVE team",()=>{
 });
 
 test("shared schedule filter applies viewing mode and profile rules",()=>{
-  assert.match(functionSource("filterGamesForViewingMode"),/filter\(viewingModeMatches\)\.filter\(profileAllowsGame\)/);
+  const source=functionSource("filterGamesForViewingMode");
+  assert.match(source,/filter\(viewingModeMatches\)/);
+  assert.match(source,/filter\(profileAllowsGame\)/);
 });
 
 test("profile schema and settings include the full preference foundation",()=>{
@@ -46,4 +48,13 @@ test("team picker has only mutually exclusive LOVE and HATE choices",()=>{
   assert.match(html,/data-team-choice="love"/);
   assert.match(html,/data-team-choice="hate"/);
   assert.match(functionSource("setTeamPreference"),/p\[opposite\]=p\[opposite\]\.filter/);
+});
+
+test("compact profile controls require explicit loading and expose preference counts",()=>{
+  assert.match(html,/id="loadProfileBtn"/);
+  assert.doesNotMatch(html,/id="renameProfileBtn"/);
+  assert.doesNotMatch(html,/id="duplicateProfileBtn"/);
+  for(const id of ["teamPreferenceCount","favoriteSportCount","visibleSportCount","selectedDateGamesCount","loveGamesCount","favoriteGamesCount","hiddenHateGamesCount"]){
+    assert.match(html,new RegExp(`id="${id}"`));
+  }
 });
