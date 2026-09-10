@@ -944,6 +944,7 @@
 .team-picker-results{display:grid;gap:7px;margin-top:10px;max-height:360px;overflow:auto}.team-picker-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:10px 11px;border:1px solid #315d79;border-radius:12px;background:rgba(4,24,39,.62)}
 .team-picker-name{display:flex;align-items:center;gap:9px;min-width:0}.team-picker-name img{width:30px;height:30px;object-fit:contain}.team-picker-name strong,.team-picker-name small{display:block}.team-picker-name strong{color:#f5fbff;font-size:13px}.team-picker-name small{color:#91a8ba;font-size:10px;margin-top:2px}.team-choice{display:flex;align-items:center;gap:4px;color:#bcd3e2;font-size:11px;font-weight:900}.team-choice input{width:19px;height:19px;accent-color:#1598e5}.team-choice.hate input{accent-color:#df625a}.team-picker-status{margin:8px 0 0;color:#91a8ba;font-size:11px}
 .settings-fold{border:1px solid rgba(49,93,121,.75);border-radius:14px;background:rgba(4,24,39,.42);margin:9px 0;overflow:hidden}.settings-fold>summary{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:13px;color:#f5fbff;font-size:14px;font-weight:900;cursor:pointer;list-style:none}.settings-fold>summary::-webkit-details-marker{display:none}.settings-fold>summary:after{content:"⌄";color:#70cfff}.settings-fold[open]>summary:after{content:"⌃"}.settings-fold-body{padding:0 12px 12px}.settings-count{color:#91b4c9;font-size:11px;white-space:nowrap}.daily-profile-counts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:8px 0 12px}.daily-count{padding:10px;border:1px solid #315d79;border-radius:11px;background:#061b2a}.daily-count strong,.daily-count span{display:block}.daily-count strong{font-size:18px;color:#f5fbff}.daily-count span{font-size:9px;color:#91a8ba;letter-spacing:.07em;margin-top:2px}
+.schedule-view-toggle{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0}.schedule-view-toggle button{border:1px solid rgba(73,188,245,.38);border-radius:11px;background:rgba(4,24,39,.78);color:#9fc0d4;padding:10px;font-size:12px;font-weight:950;letter-spacing:.06em}.schedule-view-toggle button.active{background:linear-gradient(90deg,#159de8,#0875c8);color:#03111d;border-color:#71d6ff}.app.week-mode .date-row{display:none}.app.week-mode .date-meta{margin-top:4px}
 @media(max-width:640px){
   .profile-toolbar{grid-template-columns:1fr}
   .profile-preference-grid{grid-template-columns:1fr}
@@ -1030,6 +1031,7 @@
     <button class="navbtn" id="prevDay">‹</button><div class="date-label" id="dateLabel"></div><button class="navbtn" id="nextDay">›</button><button class="todaybtn" id="todayBtn">Today</button>
   </div>
   <div class="date-meta" id="dateMeta"><strong id="currentTime">--:-- ET</strong> &nbsp;•&nbsp; <span id="remainingGames">Remaining games: --</span></div>
+  <div class="schedule-view-toggle" id="scheduleViewToggle"><button type="button" data-schedule-view="today" class="active">TODAY</button><button type="button" data-schedule-view="week">MY WEEK</button></div>
 
   <div class="section-head"><h2 id="scheduleTitle">What's On</h2><div class="live-pill"><span class="pulse-dot"></span>LIVE & UPCOMING</div></div>
   <div id="status" class="status waking">Connecting to live sports service...</div>
@@ -1131,7 +1133,7 @@
     </div>
     <div class="sports-settings" id="sportsSettings"></div>
     </div></details>
-    <p class="settings-foot">0.1H9d moves all LOVE games to the top of What's On and uses stable sport/event/time identities for matchup links and daily favorites.</p>
+    <p class="settings-foot">0.1H9e adds a rolling seven-day MY WEEK schedule built only from the active profile's stable LOVE-team identities.</p>
   </section>
 </div>
 
@@ -1194,7 +1196,7 @@ const ACTIVE_PROFILE_KEY="wtg-active-profile-v1";
 
 const PROFILE_PROVIDERS=new Set(["directv","xfinity","fios","sling","streaming"]);
 const PROFILE_VIEWING_MODES=new Set(["standard","national","local"]);
-const TEAM_PALETTE_OVERRIDES={"pittsburgh pirates":{primary:"#27251F",secondary:"#FDB827",logo:"",id:"23",sportKey:"mlb",league:"MLB"}};
+const TEAM_PALETTE_OVERRIDES={"pittsburgh pirates":{primary:"#27251F",secondary:"#FDB827",logo:"",id:"23",sportKey:"mlb",league:"MLB",leagueKey:"mlb"}};
 
 function currentProfileDefaults(){
   let visibleSports=null;
@@ -1640,6 +1642,11 @@ function updateGameSearchUi(){
 function rerenderForGameSearch(){
   updateGameSearchUi();
 
+  if(scheduleView==="week"){
+    renderLoveWeek(currentGames);
+    return;
+  }
+
   if(favoritesOnly){
     loadFavorites();
     return;
@@ -1720,7 +1727,7 @@ function filterGamesForViewingMode(games){
   return modeGames.filter(profileAllowsGame);
 }
 
-let selectedSport="whats-on", selectedDate=new Date(), favoritesOnly=false, currentGames=[], currentNcaafRankingMeta=null,lastUnfilteredProfileGames=[];
+let selectedSport="whats-on", selectedDate=new Date(), favoritesOnly=false, currentGames=[], currentNcaafRankingMeta=null,lastUnfilteredProfileGames=[],scheduleView="today";
 let serverTimeBaseMs=null, serverTimePerfBase=null;
 const gamesList=document.getElementById("gamesList"), statusBox=document.getElementById("status"), scheduleTitle=document.getElementById("scheduleTitle"), dateLabel=document.getElementById("dateLabel"), todayNav=document.getElementById("todayNav"), favoritesNav=document.getElementById("favoritesNav"), currentTimeEl=document.getElementById("currentTime"), remainingGamesEl=document.getElementById("remainingGames"), sportTabs=document.getElementById("sportTabs"), settingsBackdrop=document.getElementById("settingsBackdrop"), sportsSettings=document.getElementById("sportsSettings"), providerOptions=document.getElementById("providerOptions"), providerNote=document.getElementById("providerNote"), viewingModeOptions=document.getElementById("viewingModeOptions"), viewingModeNote=document.getElementById("viewingModeNote"),
 profileSelect=document.getElementById("profileSelect"), activeProfileLabel=document.getElementById("activeProfileLabel"),
@@ -1733,6 +1740,7 @@ profileAlertsEnabled=document.getElementById("profileAlertsEnabled"),profileConf
 const teamPickerSearch=document.getElementById("teamPickerSearch"),teamPickerStatus=document.getElementById("teamPickerStatus"),teamPickerResults=document.getElementById("teamPickerResults");
 const profileSummaryCount=document.getElementById("profileSummaryCount"),teamPreferenceCount=document.getElementById("teamPreferenceCount"),favoriteSportCount=document.getElementById("favoriteSportCount"),visibleSportCount=document.getElementById("visibleSportCount"),selectedDateGamesCount=document.getElementById("selectedDateGamesCount"),loveGamesCount=document.getElementById("loveGamesCount"),favoriteGamesCount=document.getElementById("favoriteGamesCount"),hiddenHateGamesCount=document.getElementById("hiddenHateGamesCount");
 const cardThemeOptions=document.getElementById("cardThemeOptions"),cardThemeSummary=document.getElementById("cardThemeSummary");
+const appRoot=document.querySelector(".app"),scheduleViewToggle=document.getElementById("scheduleViewToggle");
 let teamPickerMatches=[],teamPickerTimer=null,teamPickerRequest=0;
 
 let profileSavedTimer=null;
@@ -1941,7 +1949,7 @@ async function hydrateLoveTeamPalettes(){
     if(result.status!=="fulfilled"||!result.value)continue;
     const team=result.value,primary=normalizeTeamColor(team.color),secondary=normalizeTeamColor(team.alternateColor);
     if(!primary||!secondary)continue;
-    teamPalettes[normalizeTeamName(team.name)]={id:String(team.id||""),sportKey:team.sportKey||"",league:team.league||"",primary,secondary,logo:team.logo||""};changed=true;
+    teamPalettes[normalizeTeamName(team.name)]={id:String(team.id||""),sportKey:team.sportKey||"",league:team.league||"",leagueKey:team.leagueKey||"",primary,secondary,logo:team.logo||""};changed=true;
   }
   if(!changed)return false;
   saveActiveProfile({...latest,teamPalettes});renderProfileSettings();return true;
@@ -1957,7 +1965,7 @@ function setTeamPreference(team,type,checked){
   p[opposite]=p[opposite].filter(name=>normalizeTeamName(name)!==key);
   if(checked)p[target].push(teamName);
   const primary=normalizeTeamColor(teamData.color),secondary=normalizeTeamColor(teamData.alternateColor);
-  if(primary&&secondary)p.teamPalettes[key]={id:String(teamData.id||""),sportKey:teamData.sportKey||"",league:teamData.league||"",primary,secondary,logo:teamData.logo||""};
+  if(primary&&secondary)p.teamPalettes[key]={id:String(teamData.id||""),sportKey:teamData.sportKey||"",league:teamData.league||"",leagueKey:teamData.leagueKey||"",primary,secondary,logo:teamData.logo||""};
   saveActiveProfile(p);renderProfileSettings();renderSportTabs();favoritesOnly?loadFavorites():loadGames();
 }
 function applyCardTheme(theme){saveCurrentProfileSettings({cardTheme:theme==="loved"?"loved":"default"});renderProfileSettings();favoritesOnly?loadFavorites():loadGames()}
@@ -3330,7 +3338,40 @@ function googleGameSearch(game){
 function renderGames(games){const conflictKeys=directvNationalConflictKeys(games);gamesList.innerHTML=games.map(game=>renderGame(game,conflictKeys)).join("");updateDateMeta()}
 function setStatus(text,waking=false){statusBox.textContent=text;statusBox.className=waking?"status waking":"status";statusBox.style.display="block"}
 function hideStatus(){statusBox.style.display="none"}
+function setScheduleView(view){
+  scheduleView=view==="week"?"week":"today";
+  appRoot?.classList.toggle("week-mode",scheduleView==="week");
+  scheduleViewToggle?.querySelectorAll("[data-schedule-view]").forEach(button=>button.classList.toggle("active",button.dataset.scheduleView===scheduleView));
+}
+function loveScheduleSpecs(){
+  const p=getActiveProfile(),seen=new Set();
+  return (p.loveTeams||[]).map(name=>p.teamPalettes?.[normalizeTeamName(name)]||TEAM_PALETTE_OVERRIDES[normalizeTeamName(name)]).filter(team=>{
+    const key=`${team?.sportKey||""}:${team?.leagueKey||team?.sportKey||""}:${team?.id||""}`;
+    if(!team?.sportKey||!team?.id||seen.has(key))return false;seen.add(key);return true;
+  }).map(team=>`${team.sportKey}:${team.leagueKey||team.sportKey}:${team.id}`);
+}
+function renderLoveWeek(games){
+  const filtered=sortByPreferences(filterGamesBySearch(games)),groups=new Map();
+  for(const game of filtered){const key=easternDateKey(new Date(game.startTime));if(!groups.has(key))groups.set(key,[]);groups.get(key).push(game)}
+  gamesList.innerHTML=[...groups.entries()].map(([,items])=>`<section class="whats-section"><div class="whats-section-head"><h3>${formatDate(new Date(items[0].startTime))}</h3><span class="whats-count">${items.length}</span></div><div class="games">${items.map(game=>renderGame(game,directvNationalConflictKeys(items))).join("")}</div></section>`).join("");
+  scheduleTitle.textContent=getGameSearchQuery()?`My Week • SEARCH (${filtered.length})`:`My Week • ${filtered.length} LOVE Game${filtered.length===1?"":"s"}`;updateDateMeta();
+}
+async function loadLoveWeek(){
+  setScheduleView("week");favoritesOnly=false;todayNav.classList.add("active");favoritesNav.classList.remove("active");
+  document.getElementById("collegeFilterStrip").hidden=true;document.getElementById("proFilterStrip").hidden=true;
+  dateLabel.textContent="Next 7 Days";gamesList.innerHTML="";setStatus("Loading your LOVE-team week…",true);
+  await hydrateLoveTeamPalettes();const specs=loveScheduleSpecs();
+  if(!specs.length){currentGames=[];hideStatus();scheduleTitle.textContent="My Week • 0 LOVE Games";gamesList.innerHTML='<div class="whats-empty">Add a LOVE team in Settings to build your week.</div>';updateDateMeta();return}
+  try{
+    const response=await fetch(`${API_BASE}/resolve/love-schedule?teams=${encodeURIComponent(specs.join(","))}&provider=${encodeURIComponent(selectedProvider)}`,{cache:"no-store"});
+    if(!response.ok)throw new Error(`HTTP ${response.status}`);const data=await response.json();
+    currentGames=filterGamesForViewingMode(activeOrFutureGames(Array.isArray(data.games)?data.games:[]));hideStatus();
+    if(!currentGames.length){scheduleTitle.textContent="My Week • 0 LOVE Games";gamesList.innerHTML='<div class="whats-empty">No upcoming LOVE-team games were found in the next seven days.</div>';updateDateMeta();return}
+    renderLoveWeek(currentGames);
+  }catch(error){console.error(error);setStatus("Could not load the LOVE-team week. Refresh in a moment.")}
+}
 async function loadGames(){
+  if(scheduleView==="week")return loadLoveWeek();
   if(selectedSport==="whats-on"){updateDateMeta();return loadWhatsOn()}
   favoritesOnly=false;updateDateMeta();todayNav.classList.add("active");favoritesNav.classList.remove("active");dateLabel.textContent=formatDate(selectedDate);scheduleTitle.textContent=`${sportLabels[selectedSport]} Games`;gamesList.innerHTML="";const sportMeta=SPORT_CATALOG.find(s=>s.id===selectedSport);if(!sportMeta?.live){
   if(sportMeta?.sourceUrl){
@@ -3361,7 +3402,7 @@ gameSearchClear?.addEventListener("click",()=>{
   rerenderForGameSearch();
 });
 
-sportTabs.addEventListener("click",event=>{const button=event.target.closest("button[data-sport]");if(!button)return;selectedSport=button.dataset.sport;if(selectedSport!=="whats-on")whatsOnLoadGeneration++;activeCollegeFilter="all";activeProFilter="all";renderSportTabs();renderCollegeFilter();renderProFilter();loadGames()});
+sportTabs.addEventListener("click",event=>{const button=event.target.closest("button[data-sport]");if(!button)return;setScheduleView("today");selectedSport=button.dataset.sport;if(selectedSport!=="whats-on")whatsOnLoadGeneration++;activeCollegeFilter="all";activeProFilter="all";renderSportTabs();renderCollegeFilter();renderProFilter();loadGames()});
 document.getElementById("collegeFilterStrip").addEventListener("click",event=>{
   const button=event.target.closest("button[data-college-filter]");
   if(!button)return;
@@ -3441,11 +3482,12 @@ viewingModeOptions?.addEventListener("click",e=>{
 
 document.getElementById("showAllSports").addEventListener("click",()=>{const ids=SPORT_CATALOG.map(s=>s.id);saveVisibleSportIds(ids);saveCurrentProfileSettings({visibleSports:ids});renderSportsSettings();renderSportTabs();loadGames()});
 document.getElementById("coreSportsOnly").addEventListener("click",()=>{const ids=["nfl","ncaaf","mlb","nhl","collegehockey","nba","ncaab","ncaaw","wnba","racing","golf","tennis","soccer","collegesoccer"];saveVisibleSportIds(ids);saveCurrentProfileSettings({visibleSports:ids});renderSportsSettings();renderSportTabs();if(selectedSport!=="whats-on"&&!getVisibleSportIds().includes(selectedSport))selectedSport="whats-on";loadGames()});
-document.getElementById("prevDay").addEventListener("click",()=>{selectedDate.setDate(selectedDate.getDate()-1);selectedDate=new Date(selectedDate);loadGames()});
-document.getElementById("nextDay").addEventListener("click",()=>{selectedDate.setDate(selectedDate.getDate()+1);selectedDate=new Date(selectedDate);loadGames()});
-document.getElementById("todayBtn").addEventListener("click",()=>{selectedDate=new Date();loadGames()});
-todayNav.addEventListener("click",()=>{selectedDate=new Date();selectedSport="whats-on";activeCollegeFilter="all";activeProFilter="all";renderSportTabs();renderCollegeFilter();renderProFilter();loadGames()});
-favoritesNav.addEventListener("click",()=>{document.getElementById("collegeFilterStrip").hidden=true;document.getElementById("proFilterStrip").hidden=true;loadFavorites()});
+scheduleViewToggle?.addEventListener("click",event=>{const button=event.target.closest("[data-schedule-view]");if(!button)return;if(button.dataset.scheduleView==="week")loadLoveWeek();else{setScheduleView("today");selectedDate=new Date();selectedSport="whats-on";renderSportTabs();loadGames()}});
+document.getElementById("prevDay").addEventListener("click",()=>{setScheduleView("today");selectedDate.setDate(selectedDate.getDate()-1);selectedDate=new Date(selectedDate);loadGames()});
+document.getElementById("nextDay").addEventListener("click",()=>{setScheduleView("today");selectedDate.setDate(selectedDate.getDate()+1);selectedDate=new Date(selectedDate);loadGames()});
+document.getElementById("todayBtn").addEventListener("click",()=>{setScheduleView("today");selectedDate=new Date();loadGames()});
+todayNav.addEventListener("click",()=>{setScheduleView("today");selectedDate=new Date();selectedSport="whats-on";activeCollegeFilter="all";activeProFilter="all";renderSportTabs();renderCollegeFilter();renderProFilter();loadGames()});
+favoritesNav.addEventListener("click",()=>{setScheduleView("today");document.getElementById("collegeFilterStrip").hidden=true;document.getElementById("proFilterStrip").hidden=true;loadFavorites()});
 gamesList.addEventListener("click",event=>{
   const favoriteButton=event.target.closest(".favorite");
   if(favoriteButton){

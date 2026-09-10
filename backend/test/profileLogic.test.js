@@ -89,3 +89,10 @@ test("matchup links and favorites use stable composite game identities",()=>{
   assert.match(html,/currentGames\.find\(item=>gameIdentityKey\(item\)===key\)/);
   assert.doesNotMatch(html,/const index=cards\.indexOf\(card\)/);
 });
+
+test("Schedule provides a rolling seven-day LOVE-team view",()=>{
+  assert.match(html,/data-schedule-view="week"/);
+  assert.match(html,/function loadLoveWeek/);
+  assert.match(html,/\/resolve\/love-schedule/);
+  assert.match(html,/Next 7 Days/);
+});

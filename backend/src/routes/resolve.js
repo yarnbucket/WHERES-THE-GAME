@@ -490,7 +490,7 @@ async function getTeamDirectory(){
     return leagues.map(async league=>{
       const data=await fetchLeagueTeams({sport:config.sport,league:league.league});
       return extractTeams(data).map(team=>({
-        id:String(team.id),sportKey,league:league.label||config.label,
+        id:String(team.id),sportKey,league:league.label||config.label,leagueKey:league.league,
         name:team.displayName||team.name,
         abbreviation:team.abbreviation||"",
         logo:team.logos?.[0]?.href||team.logo||"",
@@ -523,6 +523,41 @@ router.get("/teams",async(req,res)=>{
     console.error("Team directory error:",error);
     return res.status(500).json({status:"error",query,count:0,teams:[]});
   }
+});
+
+function parseLoveTeamSpecs(value){
+  const seen=new Set();
+  return String(value||"").split(",").map(part=>{
+    const [sportKey,leagueKey,id]=part.split(":").map(piece=>String(piece||"").trim());
+    const config=SPORTS[sportKey];
+    if(!config||!id)return null;
+    const leagues=Array.isArray(config.leagues)?config.leagues:[{league:config.league,label:config.label}];
+    const league=leagues.find(item=>item.league===leagueKey)||(!Array.isArray(config.leagues)?leagues[0]:null);
+    if(!league)return null;
+    const key=`${sportKey}:${league.league}:${id}`;if(seen.has(key))return null;seen.add(key);
+    return {sportKey,id,config:{sport:config.sport,league:league.league,label:league.label||config.label}};
+  }).filter(Boolean).slice(0,50);
+}
+
+router.get("/love-schedule",async(req,res)=>{
+  const specs=parseLoveTeamSpecs(req.query.teams),providerKey=String(req.query.provider||"directv").toLowerCase().trim();
+  if(!specs.length)return res.json({status:"ok",days:7,count:0,games:[]});
+  try{
+    const now=Date.now(),end=now+7*24*60*60*1000,years=[new Date(now).getUTCFullYear(),new Date(end).getUTCFullYear()];
+    const results=await Promise.allSettled(specs.flatMap(spec=>[...new Set(years)].map(async season=>{
+      const data=await fetchTeamSchedule(spec.config,spec.id,season);
+      return scheduleEvents(data).map(event=>({event,spec}));
+    })));
+    const seen=new Set(),games=[];
+    for(const item of results.filter(result=>result.status==="fulfilled").flatMap(result=>result.value)){
+      const start=Date.parse(item.event?.date||"");if(!Number.isFinite(start)||start<now-4*60*60*1000||start>=end)continue;
+      const key=`${item.spec.sportKey}:${item.event.id||item.event.uid||item.event.date}`;if(seen.has(key))continue;seen.add(key);
+      let game={...normalizeEvent(item.event,item.spec.config.label,{}),_sportKey:item.spec.sportKey};
+      game=resolveGame(game,providerKey);game=await addDirectvGuideData(game,item.spec.sportKey);games.push(game);
+    }
+    games.sort((a,b)=>Date.parse(a.startTime||"")-Date.parse(b.startTime||""));
+    return res.json({status:"ok",days:7,count:games.length,games});
+  }catch(error){console.error("LOVE-team weekly schedule error:",error);return res.status(500).json({status:"error",days:7,count:0,games:[]});}
 });
 
 async function fetchTeamSchedule(config, teamId, season) {
