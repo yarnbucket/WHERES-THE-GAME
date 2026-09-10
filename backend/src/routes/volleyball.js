@@ -8,6 +8,44 @@ const LEAGUES = [
   { league: "fivb.m", label: "FIVB Men" }
 ];
 
+// ESPN currently exposes the broad FIVB men's/women's feeds, but some
+// NORCECA competitions do not appear there. Keep a small official-schedule
+// fallback for verified NORCECA events so WTG does not silently show an
+// empty Volleyball tab when those competitions are active.
+// Times below are local to Leon, Guanajuato (Central Time in Sep 2026 = UTC-6).
+const NORCECA_FALLBACKS = {
+  "20260911": [
+    ["Puerto Rico", "Venezuela", "20:00:00Z"],
+    ["Dominican Republic", "Nicaragua", "22:00:00Z"],
+    ["United States", "Cuba", "2026-09-12T00:00:00Z"],
+    ["Mexico", "Costa Rica", "2026-09-12T02:00:00Z"]
+  ],
+  "20260912": [
+    ["Dominican Republic", "Venezuela", "20:00:00Z"],
+    ["Canada", "Puerto Rico", "22:00:00Z"],
+    ["Cuba", "Guatemala", "2026-09-13T00:00:00Z"],
+    ["United States", "Mexico", "2026-09-13T02:00:00Z"]
+  ],
+  "20260913": [
+    ["Venezuela", "Nicaragua", "20:00:00Z"],
+    ["United States", "Costa Rica", "22:00:00Z"],
+    ["Dominican Republic", "Canada", "2026-09-14T00:00:00Z"],
+    ["Mexico", "Guatemala", "2026-09-14T02:00:00Z"]
+  ],
+  "20260914": [
+    ["Puerto Rico", "Nicaragua", "20:00:00Z"],
+    ["Costa Rica", "Guatemala", "22:00:00Z"],
+    ["Canada", "Venezuela", "2026-09-15T00:00:00Z"],
+    ["Mexico", "Cuba", "2026-09-15T02:00:00Z"]
+  ],
+  "20260915": [
+    ["United States", "Guatemala", "20:00:00Z"],
+    ["Cuba", "Costa Rica", "22:00:00Z"],
+    ["Canada", "Nicaragua", "2026-09-16T00:00:00Z"],
+    ["Dominican Republic", "Puerto Rico", "2026-09-16T02:00:00Z"]
+  ]
+};
+
 function normalizeDate(value) {
   if (!value) return new Date().toISOString().slice(0, 10).replaceAll("-", "");
   return String(value).replaceAll("-", "").trim();
@@ -55,10 +93,35 @@ function normalizeEvent(event, leagueLabel) {
   };
 }
 
+function norcecaFallbackGames(date) {
+  return (NORCECA_FALLBACKS[date] ?? []).map(([away, home, time], index) => {
+    const startTime = time.includes("T") ? time : `${date.slice(0, 4)}-${date.slice(4, 6)}-${date.slice(6, 8)}T${time}`;
+    return {
+      id: `norceca-wpac-2026-${date}-${index + 1}`,
+      sport: "Volleyball",
+      league: "NORCECA Women's Pan American Cup",
+      name: `${away} vs. ${home}`,
+      away,
+      home,
+      awayTeamId: null,
+      homeTeamId: null,
+      startTime,
+      status: "Scheduled",
+      network: "",
+      venue: "Domo de la Feria, Leon, Guanajuato, Mexico",
+      division: null,
+      conferences: { away: { id: null, name: null }, home: { id: null, name: null } },
+      conferenceIds: [],
+      awayRank: null,
+      homeRank: null
+    };
+  });
+}
+
 async function fetchLeague(league, date) {
   const url = `https://site.api.espn.com/apis/site/v2/sports/volleyball/${league}/scoreboard?dates=${date}&limit=500`;
   const response = await fetch(url, {
-    headers: { accept: "application/json", "user-agent": "WTG/0.1H8v" }
+    headers: { accept: "application/json", "user-agent": "WTG/0.1H8w" }
   });
   if (!response.ok) throw new Error(`ESPN volleyball ${league} request failed: ${response.status}`);
   return response.json();
@@ -77,7 +140,7 @@ router.get("/", async (req, res, next) => {
       return (data?.events ?? []).map((event) => normalizeEvent(event, label));
     }));
 
-    const games = [];
+    const games = [...norcecaFallbackGames(date)];
     const failedLeagues = [];
     for (let i = 0; i < results.length; i += 1) {
       const result = results[i];
@@ -100,7 +163,7 @@ router.get("/", async (req, res, next) => {
       sport: "volleyball",
       date,
       provider: providerKey,
-      leagues: LEAGUES.map((l) => l.label),
+      leagues: [...LEAGUES.map((l) => l.label), "NORCECA official schedule fallback"],
       failedLeagues,
       count: resolved.length,
       games: resolved
