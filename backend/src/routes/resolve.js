@@ -482,6 +482,47 @@ function teamMatchesNextSearch(team, query) {
   return normalized.split(" ").filter(Boolean).every((term) => haystack.includes(term));
 }
 
+let teamDirectoryCache={expires:0,teams:[]};
+async function getTeamDirectory(){
+  if(teamDirectoryCache.expires>Date.now()&&teamDirectoryCache.teams.length)return teamDirectoryCache.teams;
+  const results=await Promise.allSettled(Object.entries(SPORTS).flatMap(([sportKey,config])=>{
+    const leagues=Array.isArray(config.leagues)?config.leagues:[{league:config.league,label:config.label}];
+    return leagues.map(async league=>{
+      const data=await fetchLeagueTeams({sport:config.sport,league:league.league});
+      return extractTeams(data).map(team=>({
+        id:String(team.id),sportKey,league:league.label||config.label,
+        name:team.displayName||team.name,
+        abbreviation:team.abbreviation||"",
+        logo:team.logos?.[0]?.href||team.logo||""
+      }));
+    });
+  }));
+  const seen=new Set();
+  const teams=results.filter(result=>result.status==="fulfilled").flatMap(result=>result.value).filter(team=>{
+    const key=`${team.sportKey}:${team.id}`;
+    if(!team.name||seen.has(key))return false;
+    seen.add(key);return true;
+  }).sort((a,b)=>a.name.localeCompare(b.name));
+  teamDirectoryCache={expires:Date.now()+6*60*60*1000,teams};
+  return teams;
+}
+
+router.get("/teams",async(req,res)=>{
+  const query=String(req.query.q||"").trim();
+  if(query.length<2)return res.json({status:"ok",query,count:0,teams:[]});
+  try{
+    const normalized=normalizeSearchValue(query);
+    const teams=(await getTeamDirectory()).filter(team=>{
+      const text=normalizeSearchValue(`${team.name} ${team.abbreviation} ${team.league}`);
+      return normalized.split(" ").every(term=>text.includes(term));
+    }).slice(0,60);
+    return res.json({status:"ok",query,count:teams.length,teams});
+  }catch(error){
+    console.error("Team directory error:",error);
+    return res.status(500).json({status:"error",query,count:0,teams:[]});
+  }
+});
+
 async function fetchTeamSchedule(config, teamId, season) {
   const url = `https://site.api.espn.com/apis/site/v2/sports/${config.sport}/${config.league}/teams/${encodeURIComponent(teamId)}/schedule?season=${encodeURIComponent(season)}`;
   const response = await fetch(url, { headers: { accept: "application/json", "user-agent": "WTG/0.1H8n" } });

@@ -934,11 +934,15 @@
 .profile-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;margin:8px 0;border:1px solid #315d79;border-radius:12px;background:rgba(4,24,39,.62)}
 .profile-toggle-row strong{display:block;color:#f5fbff;font-size:13px}
 .profile-toggle-row small{display:block;margin-top:3px;color:#91a8ba;font-size:10px;line-height:1.25}
+.team-picker-search{display:flex;gap:8px;margin-top:10px}.team-picker-search input{flex:1;min-width:0;border:1px solid #315d79;background:#071f31;color:#f5fbff;border-radius:11px;padding:12px;font-size:15px;font-weight:750}
+.team-picker-results{display:grid;gap:7px;margin-top:10px;max-height:360px;overflow:auto}.team-picker-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:10px 11px;border:1px solid #315d79;border-radius:12px;background:rgba(4,24,39,.62)}
+.team-picker-name{display:flex;align-items:center;gap:9px;min-width:0}.team-picker-name img{width:30px;height:30px;object-fit:contain}.team-picker-name strong,.team-picker-name small{display:block}.team-picker-name strong{color:#f5fbff;font-size:13px}.team-picker-name small{color:#91a8ba;font-size:10px;margin-top:2px}.team-choice{display:flex;align-items:center;gap:4px;color:#bcd3e2;font-size:11px;font-weight:900}.team-choice input{width:19px;height:19px;accent-color:#1598e5}.team-choice.hate input{accent-color:#df625a}.team-picker-status{margin:8px 0 0;color:#91a8ba;font-size:11px}
 @media(max-width:640px){
   .profile-toolbar{grid-template-columns:1fr}
   .profile-preference-grid{grid-template-columns:1fr}
   .profile-buttons button{flex:1}
   .profile-name-editor{grid-template-columns:1fr}.profile-name-editor span{max-width:none}
+  .team-picker-row{grid-template-columns:minmax(0,1fr) auto auto;gap:7px;padding:9px 8px}.team-picker-name img{width:26px;height:26px}.team-choice{font-size:10px}
 }
 
 
@@ -1052,27 +1056,15 @@
       <p class="profile-name-active" id="activeProfileLabel"></p>
       <p class="profile-save-status" id="profileSaveStatus" role="status" aria-live="polite"></p>
 
-      <div class="profile-preference-grid">
-        <div class="profile-pref-card">
-          <h4>❤️ LOVE TEAMS</h4>
-          <div class="profile-team-add">
-            <input id="loveTeamInput" list="teamSuggestions" placeholder="Search or enter team…" autocomplete="off">
-            <button type="button" class="love" id="addLoveTeamBtn">LOVE</button>
-          </div>
-          <div class="team-chip-wrap" id="loveTeamChips"></div>
-        </div>
-
-        <div class="profile-pref-card">
-          <h4>💢 HATE TEAMS</h4>
-          <div class="profile-team-add">
-            <input id="hateTeamInput" list="teamSuggestions" placeholder="Search or enter team…" autocomplete="off">
-            <button type="button" class="hate" id="addHateTeamBtn">HATE</button>
-          </div>
-          <div class="team-chip-wrap" id="hateTeamChips"></div>
-        </div>
+      <div class="profile-pref-card">
+        <h4>❤️ LOVE / 💢 HATE TEAMS</h4>
+        <div class="team-picker-search"><input id="teamPickerSearch" placeholder="Search teams…" autocomplete="off" aria-label="Search teams"></div>
+        <p class="team-picker-status" id="teamPickerStatus">Type at least two letters to search every supported team.</p>
+        <div class="team-picker-results" id="teamPickerResults"></div>
+        <div class="team-chip-wrap" id="loveTeamChips"></div>
+        <div class="team-chip-wrap" id="hateTeamChips"></div>
       </div>
-      <datalist id="teamSuggestions"></datalist>
-      <p class="profile-help">Team suggestions grow from live schedule data and saved profiles. You can also type the full team name directly.</p>
+      <p class="profile-help">Check LOVE or HATE. If neither box is checked, the team is NORMAL. Selecting one automatically clears the other.</p>
     </div>
 
     <div class="settings-divider"></div>
@@ -1129,7 +1121,7 @@
       <button id="coreSportsOnly">Core sports</button>
     </div>
     <div class="sports-settings" id="sportsSettings"></div>
-    <p class="settings-foot">0.1H8z keeps provider, viewing mode, visible sports and alert preferences with each profile. HATE games are hidden unless a LOVE team is also playing.</p>
+    <p class="settings-foot">0.1H9 adds searchable LOVE/HATE team checkboxes. Unchecked teams are NORMAL, and HATE games stay hidden unless a LOVE team is also playing.</p>
   </section>
 </div>
 
@@ -1714,6 +1706,8 @@ favoriteSportsGrid=document.getElementById("favoriteSportsGrid"), teamSuggestion
 gameSearchInput=document.getElementById("gameSearchInput"), gameSearchClear=document.getElementById("gameSearchClear");
 const profileNameInput=document.getElementById("profileNameInput"),profileSaveStatus=document.getElementById("profileSaveStatus"),
 profileAlertsEnabled=document.getElementById("profileAlertsEnabled"),profileConfirmedOnly=document.getElementById("profileConfirmedOnly"),profileRivalryAlerts=document.getElementById("profileRivalryAlerts");
+const teamPickerSearch=document.getElementById("teamPickerSearch"),teamPickerStatus=document.getElementById("teamPickerStatus"),teamPickerResults=document.getElementById("teamPickerResults");
+let teamPickerMatches=[],teamPickerTimer=null,teamPickerRequest=0;
 
 let profileSavedTimer=null;
 function showProfileSaved(){
@@ -1863,7 +1857,39 @@ function renderProfileSettings(){
   profileAlertsEnabled.checked=p.notifications?.enabled===true;
   profileConfirmedOnly.checked=p.notifications?.confirmedViewingOnly!==false;
   profileRivalryAlerts.checked=p.notifications?.rivalryAlerts!==false;
-  teamSuggestions.innerHTML=knownTeamSuggestions().map(t=>`<option value="${escapeHtml(t)}"></option>`).join("");
+  renderTeamPickerResults();
+}
+function renderTeamPickerResults(){
+  if(!teamPickerResults)return;
+  const p=getActiveProfile(),love=new Set((p.loveTeams||[]).map(normalizeTeamName)),hate=new Set((p.hateTeams||[]).map(normalizeTeamName));
+  const saved=[...(p.loveTeams||[]),...(p.hateTeams||[])].map(name=>({name,league:"Saved team",sportKey:"",logo:""}));
+  const seen=new Set();
+  const teams=[...saved,...teamPickerMatches].filter(team=>{const key=normalizeTeamName(team.name);if(!key||seen.has(key))return false;seen.add(key);return true});
+  teamPickerResults.innerHTML=teams.map(team=>{
+    const key=normalizeTeamName(team.name),encoded=encodeURIComponent(team.name);
+    return `<div class="team-picker-row"><div class="team-picker-name">${team.logo?`<img src="${escapeHtml(team.logo)}" alt="">`:""}<span><strong>${escapeHtml(team.name)}</strong><small>${escapeHtml(team.league||team.sportKey||"")}</small></span></div><label class="team-choice"><input type="checkbox" data-team-choice="love" data-team-name="${encoded}" ${love.has(key)?"checked":""}> LOVE</label><label class="team-choice hate"><input type="checkbox" data-team-choice="hate" data-team-name="${encoded}" ${hate.has(key)?"checked":""}> HATE</label></div>`;
+  }).join("");
+}
+async function searchTeamDirectory(){
+  const query=teamPickerSearch.value.trim(),request=++teamPickerRequest;
+  if(query.length<2){teamPickerMatches=[];teamPickerStatus.textContent="Type at least two letters to search every supported team.";renderTeamPickerResults();return;}
+  teamPickerStatus.textContent="Searching teams…";
+  try{
+    const response=await fetch(`${API_BASE}/resolve/teams?q=${encodeURIComponent(query)}`);
+    if(!response.ok)throw new Error(`HTTP ${response.status}`);
+    const data=await response.json();if(request!==teamPickerRequest)return;
+    teamPickerMatches=Array.isArray(data.teams)?data.teams:[];
+    teamPickerStatus.textContent=teamPickerMatches.length?`${teamPickerMatches.length} team${teamPickerMatches.length===1?"":"s"} found.`:"No teams found.";
+    renderTeamPickerResults();
+  }catch(error){if(request!==teamPickerRequest)return;console.error(error);teamPickerStatus.textContent="Team search is temporarily unavailable.";}
+}
+function setTeamPreference(team,type,checked){
+  const p={...getActiveProfile(),loveTeams:[...(getActiveProfile().loveTeams||[])],hateTeams:[...(getActiveProfile().hateTeams||[])]};
+  const target=type==="love"?"loveTeams":"hateTeams",opposite=type==="love"?"hateTeams":"loveTeams",key=normalizeTeamName(team);
+  p[target]=p[target].filter(name=>normalizeTeamName(name)!==key);
+  p[opposite]=p[opposite].filter(name=>normalizeTeamName(name)!==key);
+  if(checked)p[target].push(team);
+  saveActiveProfile(p);renderProfileSettings();renderSportTabs();favoritesOnly?loadFavorites():loadGames();
 }
 function saveProfileNotifications(){
   saveCurrentProfileSettings({notifications:{
@@ -3318,6 +3344,12 @@ loveTeamChips?.addEventListener("click",e=>{const b=e.target.closest("[data-remo
 hateTeamChips?.addEventListener("click",e=>{const b=e.target.closest("[data-remove-team]");if(b)removeProfileTeam("hate",b.dataset.removeTeam)});
 favoriteSportsGrid?.addEventListener("click",e=>{const b=e.target.closest("[data-profile-sport]");if(b)toggleFavoriteSport(b.dataset.profileSport)});
 [profileAlertsEnabled,profileConfirmedOnly,profileRivalryAlerts].forEach(input=>input?.addEventListener("change",saveProfileNotifications));
+teamPickerSearch?.addEventListener("input",()=>{clearTimeout(teamPickerTimer);teamPickerTimer=setTimeout(searchTeamDirectory,250)});
+teamPickerResults?.addEventListener("change",event=>{
+  const input=event.target.closest("input[data-team-choice]");
+  if(!input)return;
+  setTeamPreference(decodeURIComponent(input.dataset.teamName),input.dataset.teamChoice,input.checked);
+});
 
 viewingModeOptions?.addEventListener("click",e=>{
   const btn=e.target.closest("[data-viewing-mode]");

@@ -40,3 +40,10 @@ test("profile schema and settings include the full preference foundation",()=>{
   }
   assert.match(functionSource("activateProfile"),/applyProfilePreferences/);
 });
+
+test("team picker has only mutually exclusive LOVE and HATE choices",()=>{
+  assert.match(html,/id="teamPickerSearch"/);
+  assert.match(html,/data-team-choice="love"/);
+  assert.match(html,/data-team-choice="hate"/);
+  assert.match(functionSource("setTeamPreference"),/p\[opposite\]=p\[opposite\]\.filter/);
+});
