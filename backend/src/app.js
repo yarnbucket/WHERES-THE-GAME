@@ -12,6 +12,7 @@ import otherFootballRoute from "./routes/otherFootball.js";
 import tennisRoute from "./routes/tennis.js";
 import soccerRoute from "./routes/soccer.js";
 import collegeSoccerRoute from "./routes/collegeSoccer.js";
+import mmaRoute from "./routes/mma.js";
 import resolveRoute from "./routes/resolve.js";
 
 const app = express();
@@ -68,6 +69,7 @@ app.use("/resolve", otherFootballRoute);
 app.use("/resolve", tennisRoute);
 app.use("/resolve", soccerRoute);
 app.use("/resolve", collegeSoccerRoute);
+app.use("/resolve", mmaRoute);
 app.use("/resolve", resolveRoute);
 
 // Root endpoint
