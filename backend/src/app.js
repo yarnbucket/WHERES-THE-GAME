@@ -23,14 +23,15 @@ import resolveRoute from "./routes/resolve.js";
 const app = express();
 
 const PORT = process.env.PORT || 3000;
+const LIVE_FRONTEND = "https://yarnbucket.github.io/WHERES-THE-GAME/";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const frontendPath = path.resolve(
-  __dirname,
-  "../../frontend"
-);
+// Keep the old bundled frontend available only for debugging. The public app
+// has one source of truth: GitHub Pages at LIVE_FRONTEND. This prevents Render
+// from silently serving an older UI than the one we are actually building.
+const legacyFrontendPath = path.resolve(__dirname, "../../frontend");
 
 // --------------------------------------------------
 // CORS
@@ -61,7 +62,7 @@ app.use((req, res, next) => {
 
 // Middleware
 app.use(express.json());
-app.use(express.static(frontendPath));
+app.use("/legacy-ui", express.static(legacyFrontendPath));
 
 // Routes
 app.use("/events", eventsRoute);
@@ -82,17 +83,17 @@ app.use("/resolve", collegeVolleyballRoute);
 app.use("/resolve", rugbyRoute);
 app.use("/resolve", resolveRoute);
 
-// Root endpoint
+// Render is the API host, not a second production frontend. Always send anyone
+// opening the Render URL to the same GitHub Pages UI used for normal testing.
 app.get("/", (req, res) => {
-  res.sendFile(
-    path.join(frontendPath, "index.html")
-  );
+  res.redirect(302, LIVE_FRONTEND);
 });
 
 app.get("*", (req, res) => {
-  res.sendFile(
-    path.join(frontendPath, "index.html")
-  );
+  if (req.path.startsWith("/resolve") || req.path.startsWith("/events") || req.path.startsWith("/channels") || req.path.startsWith("/streaming") || req.path.startsWith("/blackout")) {
+    return res.status(404).json({ status: "error", message: "API route not found" });
+  }
+  return res.redirect(302, LIVE_FRONTEND);
 });
 
 // Start server
