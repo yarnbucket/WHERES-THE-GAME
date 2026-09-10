@@ -1,4 +1,4 @@
-/* WTG 0.1H8y — readable broadcast-guide cards using approved WTG colors.
+/* WTG 0.1H9c — readable broadcast-guide cards with final LOVE-team palette overrides.
    Presentation-only patch: preserves data, filters, favorites, card taps and source priority. */
 (()=>{
   const css=`
@@ -119,6 +119,25 @@
     overflow:hidden!important;display:-webkit-box!important;-webkit-line-clamp:3!important;-webkit-box-orient:vertical!important
   }
   .game-card .profile-tag{font-size:8px!important}
+  /* 0.1H9c: final-layer LOVE-team palette overrides. These intentionally
+     follow the base interface rules because that layer uses !important. */
+  .game-card.loved-team-colors{
+    background:linear-gradient(180deg,var(--team-primary),color-mix(in srgb,var(--team-primary) 62%,#000))!important;
+    border-color:var(--team-secondary)!important;
+    box-shadow:0 10px 24px rgba(0,0,0,.38),inset 0 2px 0 color-mix(in srgb,var(--team-secondary) 55%,transparent)!important
+  }
+  .game-card.loved-team-colors .card-top{background:linear-gradient(90deg,var(--team-secondary),color-mix(in srgb,var(--team-secondary) 68%,var(--team-primary)))!important;border-color:color-mix(in srgb,var(--team-secondary) 70%,#fff)!important}
+  .game-card.loved-team-colors .game-sport,.game-card.loved-team-colors .gender-tag{color:var(--team-mark-text)!important}
+  .game-card.loved-team-colors .matchup,.game-card.loved-team-colors .event-title{background:linear-gradient(180deg,color-mix(in srgb,var(--team-primary) 88%,#000),color-mix(in srgb,var(--team-primary) 66%,#000))!important}
+  .game-card.loved-team-colors .team-mark{background:linear-gradient(145deg,var(--team-secondary),color-mix(in srgb,var(--team-secondary) 72%,#000))!important;border-color:var(--team-text)!important;color:var(--team-mark-text)!important}
+  .game-card.loved-team-colors .team-copy span{color:color-mix(in srgb,var(--team-text) 72%,var(--team-secondary))!important}
+  .game-card.loved-team-colors .team-copy strong,.game-card.loved-team-colors .event-title{color:var(--team-text)!important}
+  .game-card.loved-team-colors .team-rank,.game-card.loved-team-colors .venue-glyph{color:var(--team-secondary)!important}
+  .game-card.loved-team-colors .game-meta,.game-card.loved-team-colors .stream-badges,.game-card.loved-team-colors .game-venue{background:color-mix(in srgb,var(--team-primary) 72%,#000)!important;border-color:color-mix(in srgb,var(--team-secondary) 28%,transparent)!important}
+  .game-card.loved-team-colors .game-time,.game-card.loved-team-colors .game-network,.game-card.loved-team-colors .game-venue{color:var(--team-text)!important}
+  .game-card.loved-team-colors .directv-box{background:linear-gradient(180deg,color-mix(in srgb,var(--team-primary) 55%,#000),color-mix(in srgb,var(--team-primary) 32%,#000))!important}
+  .game-card.loved-team-colors .directv-label,.game-card.loved-team-colors .directv-channel{color:var(--team-secondary)!important;background:color-mix(in srgb,var(--team-secondary) 10%,transparent)!important;border-color:color-mix(in srgb,var(--team-secondary) 45%,transparent)!important}
+  .game-card.loved-team-colors .directv-note{color:var(--team-text)!important}
   @media(max-width:430px){
     .game-card{border-radius:13px!important}
     .game-card .game-sport{font-size:11px!important;padding:6px 9px!important}
@@ -138,5 +157,5 @@
   style.id='wtg-player-interface-style';
   style.textContent=css;
   document.head.appendChild(style);
-  console.info('WTG 0.1H8y readable broadcast-guide interface loaded');
+  console.info('WTG 0.1H9c readable broadcast-guide interface loaded');
 })();

@@ -1131,7 +1131,7 @@
     </div>
     <div class="sports-settings" id="sportsSettings"></div>
     </div></details>
-    <p class="settings-foot">0.1H9b hides placeholder rankings outside the Top 25 and adds profile-selectable LOVE-team card palettes with safe default fallback.</p>
+    <p class="settings-foot">0.1H9c applies LOVE-team colors in the final card layer and automatically refreshes missing palettes for previously saved LOVE teams.</p>
   </section>
 </div>
 
@@ -1921,6 +1921,30 @@ async function searchTeamDirectory(){
     teamPickerStatus.textContent=teamPickerMatches.length?`${teamPickerMatches.length} team${teamPickerMatches.length===1?"":"s"} found.`:"No teams found.";
     renderTeamPickerResults();
   }catch(error){if(request!==teamPickerRequest)return;console.error(error);teamPickerStatus.textContent="Team search is temporarily unavailable.";}
+}
+async function hydrateLoveTeamPalettes(){
+  const activeName=getActiveProfileName(),profile=getActiveProfile();
+  const missing=(profile.loveTeams||[]).filter(team=>{
+    const key=normalizeTeamName(team),palette=profile.teamPalettes?.[key];
+    return !TEAM_PALETTE_OVERRIDES[key]&&(!normalizeTeamColor(palette?.primary)||!normalizeTeamColor(palette?.secondary));
+  });
+  if(!missing.length)return false;
+  const results=await Promise.allSettled(missing.map(async team=>{
+    const response=await fetch(`${API_BASE}/resolve/teams?q=${encodeURIComponent(team)}`);
+    if(!response.ok)return null;
+    const data=await response.json();
+    return (data.teams||[]).find(candidate=>normalizeTeamName(candidate.name)===normalizeTeamName(team))||null;
+  }));
+  if(getActiveProfileName()!==activeName)return false;
+  const latest=getActiveProfile(),teamPalettes={...(latest.teamPalettes||{})};let changed=false;
+  for(const result of results){
+    if(result.status!=="fulfilled"||!result.value)continue;
+    const team=result.value,primary=normalizeTeamColor(team.color),secondary=normalizeTeamColor(team.alternateColor);
+    if(!primary||!secondary)continue;
+    teamPalettes[normalizeTeamName(team.name)]={id:String(team.id||""),sportKey:team.sportKey||"",league:team.league||"",primary,secondary,logo:team.logo||""};changed=true;
+  }
+  if(!changed)return false;
+  saveActiveProfile({...latest,teamPalettes});renderProfileSettings();return true;
 }
 function normalizeTeamColor(value){const hex=String(value||"").replace(/^#/,"").trim();return /^[0-9a-f]{6}$/i.test(hex)?`#${hex.toUpperCase()}`:null}
 function setTeamPreference(team,type,checked){
@@ -3356,7 +3380,7 @@ providerOptions?.addEventListener("click",e=>{
 profileSelect?.addEventListener("change",()=>{profileSaveStatus.textContent=profileSelect.value===getActiveProfileName()?"This profile is active.":`Press LOAD PROFILE to use ${profileSelect.value}.`});
 document.getElementById("loadProfileBtn")?.addEventListener("click",()=>{
   if(!activateProfile(profileSelect.value))return;
-  renderProfileSettings();renderViewingModeSettings();renderProviderSettings();renderSportsSettings();renderSportTabs();showProfileSaved();loadGames();
+  renderProfileSettings();renderViewingModeSettings();renderProviderSettings();renderSportsSettings();renderSportTabs();showProfileSaved();loadGames();hydrateLoveTeamPalettes().then(changed=>{if(changed)loadGames()});
 });
 document.getElementById("newProfileBtn")?.addEventListener("click",()=>{
   const name=profileNameInput.value;
@@ -3447,6 +3471,7 @@ renderSportsSettings();
 updateDateMeta();
 setInterval(updateDateMeta,1000);
 loadGames();
+hydrateLoveTeamPalettes().then(changed=>{if(changed)loadGames()});
 </script>
 </body>
 </html>

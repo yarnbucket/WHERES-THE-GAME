@@ -4,6 +4,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 
 const html=fs.readFileSync(new URL("../../app.html",import.meta.url),"utf8");
+const playerInterfacePatch=fs.readFileSync(new URL("../../wtg-player-interface-patch.js",import.meta.url),"utf8");
 
 function functionSource(name){
   const start=html.indexOf(`function ${name}(`);
@@ -72,4 +73,7 @@ test("profiles can apply verified LOVE-team colors with a default fallback",()=>
   assert.match(html,/function lovedTeamCardPalette/);
   assert.match(html,/\.game-card\.loved-team-colors/);
   for(const color of ["#27251F","#FDB827","#FFFFFF"])assert.match(html,new RegExp(color,"i"));
+  assert.match(playerInterfacePatch,/\.game-card\.loved-team-colors[\s\S]*background:[^;]+!important/);
+  assert.match(playerInterfacePatch,/\.game-card\.loved-team-colors \.card-top[\s\S]*!important/);
+  assert.match(html,/function hydrateLoveTeamPalettes/);
 });
