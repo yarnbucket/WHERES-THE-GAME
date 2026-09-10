@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Where's the Game?</title>
-  <!-- WTG 0.1H8m modular shell: preserves full approved app.html and loads small feature patches safely. -->
+  <!-- WTG 0.1H8n modular shell: preserves full approved app.html, enables live Boxing, and loads small feature patches safely. -->
   <style>
     html,body{margin:0;min-height:100%;background:#020812;color:#d9f4ff;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
     .boot{min-height:100vh;display:grid;place-items:center;text-align:center;padding:24px}
@@ -16,12 +16,20 @@
   <script>
   (async()=>{
     try{
-      const response=await fetch('./app.html?v=0.1H8m',{cache:'no-store'});
+      const response=await fetch('./app.html?v=0.1H8n',{cache:'no-store'});
       if(!response.ok)throw new Error(`App shell HTTP ${response.status}`);
       let html=await response.text();
+
+      // Boxing backend is now connected. Flip the existing catalog entry from
+      // placeholder mode to the same live resolver path used by connected sports.
+      html=html.replace(
+        '{id:"boxing",tab:"Boxing",label:"Boxing",group:"Combat",live:false,defaultOn:true}',
+        '{id:"boxing",tab:"Boxing",label:"Boxing",group:"Combat",live:true,defaultOn:true}'
+      );
+
       const patches=[
-        '<script src="./wtg-mlb-streaming-patch.js?v=0.1H8m"><\/script>',
-        '<script src="./wtg-multichannel-patch.js?v=0.1H8m"><\/script>'
+        '<script src="./wtg-mlb-streaming-patch.js?v=0.1H8n"><\/script>',
+        '<script src="./wtg-multichannel-patch.js?v=0.1H8n"><\/script>'
       ].join('');
       if(/<\/body>/i.test(html))html=html.replace(/<\/body>/i,patches+'</body>');
       else html+=patches;
