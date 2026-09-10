@@ -1,4 +1,4 @@
-/* WTG 0.1H8t — compact broadcast-guide cards using approved WTG colors.
+/* WTG 0.1H8y — readable broadcast-guide cards using approved WTG colors.
    Presentation-only patch: preserves data, filters, favorites, card taps and source priority. */
 (()=>{
   const css=`
@@ -22,7 +22,7 @@
   .game-card .game-sport{
     flex:1!important;display:flex!important;align-items:center!important;min-height:30px!important;
     margin:0!important;padding:5px 10px!important;color:#03111d!important;background:transparent!important;border:0!important;
-    font-size:10px!important;font-weight:1000!important;letter-spacing:.11em!important;text-transform:uppercase!important
+    font-size:12px!important;font-weight:1000!important;letter-spacing:.10em!important;text-transform:uppercase!important
   }
   .game-card .gender-tag{
     display:inline-flex!important;align-items:center!important;margin-left:7px!important;padding:2px 6px!important;
@@ -42,22 +42,22 @@
     background:linear-gradient(180deg,rgba(8,31,50,.98),rgba(5,23,38,.98))!important
   }
   .game-card .team{
-    display:grid!important;grid-template-columns:40px minmax(0,1fr)!important;align-items:center!important;
+    display:grid!important;grid-template-columns:46px minmax(0,1fr)!important;align-items:center!important;
     gap:8px!important;min-width:0!important
   }
   .game-card .team-mark{
-    display:grid!important;place-items:center!important;width:40px!important;height:40px!important;border-radius:9px!important;
+    display:grid!important;place-items:center!important;width:46px!important;height:46px!important;border-radius:10px!important;
     background:linear-gradient(145deg,rgba(17,102,161,.96),rgba(5,51,87,.98))!important;
-    border:1px solid rgba(87,198,255,.42)!important;color:#fff!important;font-size:13px!important;font-weight:1000!important;
+    border:1px solid rgba(87,198,255,.42)!important;color:#fff!important;font-size:15px!important;font-weight:1000!important;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 4px 10px rgba(0,0,0,.20)!important
   }
   .game-card .team-copy{min-width:0!important}
   .game-card .team-copy span{
-    display:block!important;color:#83a6bb!important;font-size:9px!important;font-weight:700!important;line-height:1.12!important;
+    display:block!important;color:#9bb9ca!important;font-size:12px!important;font-weight:750!important;line-height:1.15!important;
     letter-spacing:.035em!important;text-transform:uppercase!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important
   }
   .game-card .team-copy strong{
-    display:block!important;margin-top:2px!important;color:#f7fbff!important;font-size:17px!important;line-height:1.05!important;
+    display:block!important;margin-top:3px!important;color:#f7fbff!important;font-size:21px!important;line-height:1.08!important;
     font-weight:1000!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;text-transform:none!important
   }
   .game-card .team-rank{color:#159de8!important;margin-right:3px!important}
@@ -76,7 +76,7 @@
   }
   .game-card .game-time{
     margin:0!important;padding:0!important;color:#f5fbff!important;background:transparent!important;border:0!important;
-    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;font-size:14px!important;font-weight:800!important;letter-spacing:.01em!important
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;font-size:20px!important;font-weight:800!important;letter-spacing:.02em!important
   }
   .game-card .game-time:before{
     content:""!important;display:inline-block!important;width:5px!important;height:5px!important;margin:0 7px 1px 0!important;
@@ -85,57 +85,58 @@
   .game-card .meta-dot{display:none!important}
   .game-card .game-network{
     grid-column:3!important;margin:0!important;padding:0!important;color:#9cb5c5!important;background:transparent!important;border:0!important;
-    font-size:11px!important;font-weight:800!important;letter-spacing:.035em!important;text-transform:uppercase!important;text-align:right!important
+    font-size:14px!important;font-weight:850!important;letter-spacing:.025em!important;text-transform:uppercase!important;text-align:right!important
   }
   .game-card .stream-badges{margin:0!important;padding:5px 10px!important;border-bottom:1px solid rgba(86,163,205,.14)!important;background:rgba(3,17,29,.92)!important}
   .game-card .game-venue{
     margin:0!important;padding:6px 10px!important;color:#8fa8b9!important;background:rgba(3,17,29,.92)!important;
-    border-bottom:1px solid rgba(86,163,205,.16)!important;font-size:10px!important;line-height:1.2!important
+    border-bottom:1px solid rgba(86,163,205,.16)!important;font-size:13px!important;line-height:1.25!important
   }
   .game-card .venue-glyph{color:#159de8!important}
   .game-card .directv-box{
     position:relative!important;display:grid!important;grid-template-columns:72px minmax(0,1fr)!important;
     grid-template-rows:18px minmax(30px,auto)!important;align-items:center!important;column-gap:0!important;row-gap:0!important;
-    width:100%!important;height:auto!important;min-height:58px!important;margin:0!important;padding:0!important;
+    width:100%!important;height:auto!important;min-height:72px!important;margin:0!important;padding:0!important;
     border:0!important;border-radius:0!important;background:linear-gradient(180deg,rgba(2,13,23,.99),rgba(1,10,18,.995))!important;overflow:hidden!important
   }
   .game-card .directv-label{
     grid-column:1!important;grid-row:1!important;align-self:end!important;min-width:0!important;margin:0!important;padding:5px 6px 0!important;
     color:#159de8!important;background:rgba(21,157,232,.10)!important;border-right:1px solid rgba(21,157,232,.35)!important;
-    font-size:8px!important;font-weight:1000!important;line-height:1!important;letter-spacing:.12em!important;text-transform:uppercase!important;text-align:center!important;
+    font-size:10px!important;font-weight:1000!important;line-height:1!important;letter-spacing:.12em!important;text-transform:uppercase!important;text-align:center!important;
     white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important
   }
   .game-card .directv-channel{
     grid-column:1!important;grid-row:2!important;align-self:stretch!important;display:flex!important;align-items:flex-start!important;justify-content:center!important;
     min-width:0!important;max-width:none!important;margin:0!important;padding:1px 4px 6px!important;
     color:#159de8!important;background:rgba(21,157,232,.10)!important;border-right:1px solid rgba(21,157,232,.35)!important;
-    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;font-size:27px!important;line-height:1!important;font-weight:900!important;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;font-size:32px!important;line-height:1!important;font-weight:900!important;
     text-align:center!important;text-shadow:0 0 12px rgba(21,157,232,.45)!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important
   }
   .game-card .directv-channel[data-long-source="true"]{font-size:12px!important;line-height:1.05!important;align-items:center!important;white-space:normal!important}
   .game-card .directv-note{
     grid-column:2!important;grid-row:1 / span 2!important;min-width:0!important;max-width:none!important;margin:0!important;padding:8px 11px!important;
-    color:#b4c8d5!important;font-size:10px!important;line-height:1.2!important;text-align:left!important;white-space:normal!important;
+    color:#d0dde5!important;font-size:13px!important;line-height:1.25!important;text-align:left!important;white-space:normal!important;
     overflow:hidden!important;display:-webkit-box!important;-webkit-line-clamp:3!important;-webkit-box-orient:vertical!important
   }
   .game-card .profile-tag{font-size:8px!important}
   @media(max-width:430px){
     .game-card{border-radius:13px!important}
-    .game-card .game-sport{font-size:9px!important;padding:5px 9px!important}
-    .game-card .matchup{grid-template-columns:minmax(0,1fr) 20px minmax(0,1fr)!important;gap:6px!important;padding:8px 8px 6px!important}
-    .game-card .team{grid-template-columns:36px minmax(0,1fr)!important;gap:6px!important}
-    .game-card .team-mark{width:36px!important;height:36px!important;border-radius:8px!important;font-size:11px!important}
-    .game-card .team-copy span{font-size:8px!important}.game-card .team-copy strong{font-size:14px!important}
+    .game-card .game-sport{font-size:11px!important;padding:6px 9px!important}
+    .game-card .matchup{grid-template-columns:minmax(0,1fr) 20px minmax(0,1fr)!important;gap:6px!important;padding:10px 8px 9px!important}
+    .game-card .team{grid-template-columns:42px minmax(0,1fr)!important;gap:7px!important}
+    .game-card .team-mark{width:42px!important;height:42px!important;border-radius:9px!important;font-size:14px!important}
+    .game-card .team-copy span{font-size:11px!important}.game-card .team-copy strong{font-size:19px!important}
     .game-card .at-mark{width:20px!important;height:20px!important;font-size:10px!important}
-    .game-card .game-meta{padding:6px 9px!important}.game-card .game-time{font-size:13px!important}.game-card .game-network{font-size:10px!important}
-    .game-card .game-venue{padding:5px 9px!important;font-size:9px!important}
-    .game-card .directv-box{grid-template-columns:66px minmax(0,1fr)!important;min-height:54px!important}
-    .game-card .directv-channel{font-size:24px!important}.game-card .directv-channel[data-long-source="true"]{font-size:10px!important}
-    .game-card .directv-note{font-size:9px!important;padding:7px 9px!important}
+    .game-card .game-meta{padding:8px 9px!important}.game-card .game-time{font-size:19px!important}.game-card .game-network{font-size:13px!important}
+    .game-card .game-venue{padding:7px 9px!important;font-size:12px!important}
+    .game-card .directv-box{grid-template-columns:78px minmax(0,1fr)!important;min-height:68px!important}
+    .game-card .directv-label{font-size:9px!important}
+    .game-card .directv-channel{font-size:30px!important}.game-card .directv-channel[data-long-source="true"]{font-size:13px!important}
+    .game-card .directv-note{font-size:12px!important;padding:8px 10px!important}
   }`;
   const style=document.createElement('style');
   style.id='wtg-player-interface-style';
   style.textContent=css;
   document.head.appendChild(style);
-  console.info('WTG 0.1H8t compact broadcast-guide interface loaded');
+  console.info('WTG 0.1H8y readable broadcast-guide interface loaded');
 })();
