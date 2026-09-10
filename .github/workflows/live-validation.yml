@@ -1,0 +1,31 @@
+name: WTG Live Validation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "index.html"
+      - "app.html"
+      - "wtg-*.js"
+      - "scripts/validate-live.mjs"
+      - ".github/workflows/live-validation.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: wtg-live-validation
+  cancel-in-progress: true
+
+jobs:
+  validate-live-app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Wait for Render and GitHub Pages deploys
+        run: sleep 45
+
+      - name: Validate live Rugby end to end
+        run: node scripts/validate-live.mjs
