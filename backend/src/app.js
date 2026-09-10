@@ -11,6 +11,7 @@ import blackoutRoute from "./routes/blackout.js";
 import otherFootballRoute from "./routes/otherFootball.js";
 import tennisRoute from "./routes/tennis.js";
 import soccerRoute from "./routes/soccer.js";
+import collegeSoccerRoute from "./routes/collegeSoccer.js";
 import resolveRoute from "./routes/resolve.js";
 
 const app = express();
@@ -66,6 +67,7 @@ app.use("/blackout", blackoutRoute);
 app.use("/resolve", otherFootballRoute);
 app.use("/resolve", tennisRoute);
 app.use("/resolve", soccerRoute);
+app.use("/resolve", collegeSoccerRoute);
 app.use("/resolve", resolveRoute);
 
 // Root endpoint
