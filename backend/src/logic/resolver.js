@@ -129,6 +129,12 @@ const STREAMING_SOURCES = {
     type: "streaming"
   },
 
+  "ESPN App": {
+    service: "ESPN App",
+    type: "streaming",
+    note: "ESPN App / ESPN Unlimited"
+  },
+
   // Major streaming services
   Peacock: {
     service: "Peacock",
