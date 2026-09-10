@@ -1,4 +1,4 @@
-/* WTG 0.1H9c — readable broadcast-guide cards with final LOVE-team palette overrides.
+/* WTG 0.1H9d — readable broadcast-guide cards with final LOVE-team palette overrides.
    Presentation-only patch: preserves data, filters, favorites, card taps and source priority. */
 (()=>{
   const css=`
@@ -157,5 +157,5 @@
   style.id='wtg-player-interface-style';
   style.textContent=css;
   document.head.appendChild(style);
-  console.info('WTG 0.1H9c readable broadcast-guide interface loaded');
+  console.info('WTG 0.1H9d readable broadcast-guide interface loaded');
 })();

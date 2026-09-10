@@ -77,3 +77,15 @@ test("profiles can apply verified LOVE-team colors with a default fallback",()=>
   assert.match(playerInterfacePatch,/\.game-card\.loved-team-colors \.card-top[\s\S]*!important/);
   assert.match(html,/function hydrateLoveTeamPalettes/);
 });
+
+test("What's On sorts LOVE games before its pro and college hierarchy",()=>{
+  const source=functionSource("sortByPreferences");
+  assert.ok(source.indexOf("affinityA.love!==affinityB.love")<source.indexOf("whatsOnGroup(a)-whatsOnGroup(b)"));
+});
+
+test("matchup links and favorites use stable composite game identities",()=>{
+  assert.match(html,/function gameIdentityKey/);
+  assert.match(html,/data-game-key=/);
+  assert.match(html,/currentGames\.find\(item=>gameIdentityKey\(item\)===key\)/);
+  assert.doesNotMatch(html,/const index=cards\.indexOf\(card\)/);
+});

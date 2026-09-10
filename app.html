@@ -1131,7 +1131,7 @@
     </div>
     <div class="sports-settings" id="sportsSettings"></div>
     </div></details>
-    <p class="settings-foot">0.1H9c applies LOVE-team colors in the final card layer and automatically refreshes missing palettes for previously saved LOVE teams.</p>
+    <p class="settings-foot">0.1H9d moves all LOVE games to the top of What's On and uses stable sport/event/time identities for matchup links and daily favorites.</p>
   </section>
 </div>
 
@@ -1906,7 +1906,7 @@ function updateProfileGameCounts(){
   const shown=Array.isArray(currentGames)?currentGames:[],raw=Array.isArray(lastUnfilteredProfileGames)?lastUnfilteredProfileGames:[];
   if(selectedDateGamesCount)selectedDateGamesCount.textContent=String(shown.length);
   if(loveGamesCount)loveGamesCount.textContent=String(shown.filter(game=>profileAffinity(game).love).length);
-  if(favoriteGamesCount)favoriteGamesCount.textContent=String(shown.filter(game=>isFavorite(game.id)).length);
+  if(favoriteGamesCount)favoriteGamesCount.textContent=String(shown.filter(isFavorite).length);
   if(hiddenHateGamesCount)hiddenHateGamesCount.textContent=String(raw.filter(game=>{const a=profileAffinity(game);return a.hate&&!a.love}).length);
 }
 async function searchTeamDirectory(){
@@ -2091,8 +2091,9 @@ function updateDateMeta(){currentTimeEl.textContent=formatCurrentEasternTime();r
 function easternDateKey(date=new Date()){return new Intl.DateTimeFormat("en-CA",{timeZone:EASTERN_TZ,year:"numeric",month:"2-digit",day:"2-digit"}).format(date)}
 function getFavorites(){try{const raw=JSON.parse(localStorage.getItem("wtg-live-favorites")||"[]");if(!Array.isArray(raw))return[];const today=easternDateKey();const kept=raw.filter(item=>{const savedDay=item?._wtgFavoriteDay;if(savedDay)return savedDay===today;if(item?.startTime)return easternDateKey(new Date(item.startTime))===today;return false});if(kept.length!==raw.length)saveFavorites(kept);return kept}catch{return[]}}
 function saveFavorites(items){localStorage.setItem("wtg-live-favorites",JSON.stringify(items))}
-function isFavorite(id){return getFavorites().some(item=>String(item.id)===String(id))}
-function toggleFavorite(game){const favs=getFavorites(),exists=favs.some(item=>String(item.id)===String(game.id));saveFavorites(exists?favs.filter(item=>String(item.id)!==String(game.id)):[...favs,{...game,_wtgFavoriteDay:easternDateKey()}]);favoritesOnly?loadFavorites():renderGames(currentGames)}
+function gameIdentityKey(game){return [game?._sportKey||game?.sport||"",game?.id||game?.name||"",game?.startTime||""].join("|")}
+function isFavorite(game){const key=gameIdentityKey(game);return getFavorites().some(item=>gameIdentityKey(item)===key)}
+function toggleFavorite(game){const key=gameIdentityKey(game),favs=getFavorites(),exists=favs.some(item=>gameIdentityKey(item)===key);saveFavorites(exists?favs.filter(item=>gameIdentityKey(item)!==key):[...favs,{...game,_wtgFavoriteDay:easternDateKey()}]);favoritesOnly?loadFavorites():rerenderForGameSearch()}
 function directvNationalConflictKeys(games){
   const counts=new Map();
   for(const game of games){
@@ -2867,7 +2868,7 @@ function proPriorityScore(game){
 
 function sortProGames(games){
   return [...games].sort((a,b)=>{
-    const fav=isFavorite(b.id)-isFavorite(a.id);
+    const fav=isFavorite(b)-isFavorite(a);
     if(fav)return fav;
     const p=proPriorityScore(b)-proPriorityScore(a);
     if(p)return p;
@@ -2931,7 +2932,7 @@ function collegePriorityScore(game){
 
 function sortCollegeGames(games){
   return [...games].sort((a,b)=>{
-    const fav=isFavorite(b.id)-isFavorite(a.id);
+    const fav=isFavorite(b)-isFavorite(a);
     if(fav)return fav;
     const p=collegePriorityScore(b)-collegePriorityScore(a);
     if(p)return p;
@@ -3018,7 +3019,7 @@ function renderCollegeGames(){
 
 function preferenceScore(game){
   let score=0;
-  if(isFavorite(game.id))score+=10000;
+  if(isFavorite(game))score+=10000;
   score+=profileAffinityScore(game);
   score+=favoriteSportScore(game);
   score+=collegePriorityScore(game);
@@ -3041,6 +3042,15 @@ function sortByPreferences(games){
   // 0.1H8a: group is authoritative before the existing ranking hierarchy.
   // This prevents a high-priority college game from jumping above any pro game.
   return [...games].sort((a,b)=>{
+    const affinityA=profileAffinity(a),affinityB=profileAffinity(b);
+    if(affinityA.love!==affinityB.love)return affinityB.love-affinityA.love;
+    if(affinityA.love&&affinityB.love){
+      const rivalryA=affinityA.hate?1:0,rivalryB=affinityB.hate?1:0;
+      if(rivalryA!==rivalryB)return rivalryB-rivalryA;
+      const lovedLive=isLiveGame(b)-isLiveGame(a);if(lovedLive)return lovedLive;
+      const lovedAt=Date.parse(a?.startTime||""),lovedBt=Date.parse(b?.startTime||"");
+      if(Number.isFinite(lovedAt)&&Number.isFinite(lovedBt)&&lovedAt!==lovedBt)return lovedAt-lovedBt;
+    }
     const group=whatsOnGroup(a)-whatsOnGroup(b);
     if(group)return group;
 
@@ -3251,7 +3261,7 @@ function lovedTeamCardPalette(game){
   return {primary,secondary,text:readableTextColor(primary),markText:readableTextColor(secondary)};
 }
 function renderGame(game,conflictKeys){
-  const d=getViewingSourceDisplay(game,conflictKeys),favorite=isFavorite(game.id);
+  const d=getViewingSourceDisplay(game,conflictKeys),favorite=isFavorite(game),gameKey=encodeURIComponent(gameIdentityKey(game));
   const affinity=profileAffinity(game),notificationPrefs=getActiveProfile().notifications||{};
   const teamPalette=lovedTeamCardPalette(game);
   const hasTeams=game.away&&game.home;
@@ -3284,11 +3294,11 @@ function renderGame(game,conflictKeys){
   }
 
   const themeStyle=teamPalette?` style="--team-primary:${teamPalette.primary};--team-secondary:${teamPalette.secondary};--team-text:${teamPalette.text};--team-mark-text:${teamPalette.markText}"`:"";
-  return `<article class="game-card${teamPalette?" loved-team-colors":""}"${themeStyle}>
+  return `<article class="game-card${teamPalette?" loved-team-colors":""}" data-game-key="${gameKey}"${themeStyle}>
     <div class="card-main">
       <div class="card-top">
         <span class="game-sport">${sportLine}</span>
-        <button class="favorite ${favorite?"active":""}" data-id="${game.id}" aria-label="Favorite">${favorite?"★":"☆"}</button>
+        <button class="favorite ${favorite?"active":""}" data-game-key="${gameKey}" aria-label="Favorite">${favorite?"★":"☆"}</button>
       </div>
       ${main}
       <div class="game-meta">
@@ -3439,7 +3449,8 @@ favoritesNav.addEventListener("click",()=>{document.getElementById("collegeFilte
 gamesList.addEventListener("click",event=>{
   const favoriteButton=event.target.closest(".favorite");
   if(favoriteButton){
-    const game=currentGames.find(item=>String(item.id)===String(favoriteButton.dataset.id));
+    const key=decodeURIComponent(favoriteButton.dataset.gameKey||"");
+    const game=currentGames.find(item=>gameIdentityKey(item)===key);
     if(game)toggleFavorite(game);
     return;
   }
@@ -3449,16 +3460,8 @@ gamesList.addEventListener("click",event=>{
 
   const card=event.target.closest(".game-card");
   if(!card)return;
-
-  const cards=[...gamesList.querySelectorAll(".game-card")];
-  const index=cards.indexOf(card);
-  const visibleGames=isCollegeSport(selectedSport)
-    ?sortCollegeGames((Array.isArray(currentGames)?currentGames:[]).filter(g=>collegeFilterMatches(g,activeCollegeFilter)))
-    :isProSport(selectedSport)
-      ?sortProGames((Array.isArray(currentGames)?currentGames:[]).filter(g=>proFilterMatches(g,activeProFilter)))
-      :currentGames;
-
-  const game=visibleGames[index];
+  const key=decodeURIComponent(card.dataset.gameKey||"");
+  const game=currentGames.find(item=>gameIdentityKey(item)===key);
   if(game)googleGameSearch(game);
 });
 applyProfilePreferences(getActiveProfile());
