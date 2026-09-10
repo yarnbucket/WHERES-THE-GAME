@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Where's the Game?</title>
-  <!-- WTG 0.1H9e modular shell: rolling seven-day LOVE-team schedule. -->
+  <!-- WTG 0.1H9f modular shell: official MLB status and broadcast enrichment. -->
   <style>
     html,body{margin:0;min-height:100%;background:#020812;color:#d9f4ff;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
     .boot{min-height:100vh;display:grid;place-items:center;text-align:center;padding:24px}
@@ -16,7 +16,7 @@
   <script>
   (async()=>{
     try{
-      const response=await fetch('./app.html?v=0.1H9e',{cache:'no-store'});
+      const response=await fetch('./app.html?v=0.1H9f',{cache:'no-store'});
       if(!response.ok)throw new Error(`App shell HTTP ${response.status}`);
       let html=await response.text();
 
@@ -26,12 +26,12 @@
       );
 
       const patches=[
-        '<script src="./wtg-mlb-streaming-patch.js?v=0.1H9e"><\/script>',
-        '<script src="./wtg-multichannel-patch.js?v=0.1H9e"><\/script>',
-        '<script src="./wtg-player-interface-patch.js?v=0.1H9e"><\/script>',
-        '<script src="./wtg-gender-tags-patch.js?v=0.1H9e"><\/script>',
-        '<script src="./wtg-gold-channel-patch.js?v=0.1H9e"><\/script>',
-        '<script src="./wtg-rugby-display-patch.js?v=0.1H9e"><\/script>'
+        '<script src="./wtg-mlb-streaming-patch.js?v=0.1H9f"><\/script>',
+        '<script src="./wtg-multichannel-patch.js?v=0.1H9f"><\/script>',
+        '<script src="./wtg-player-interface-patch.js?v=0.1H9f"><\/script>',
+        '<script src="./wtg-gender-tags-patch.js?v=0.1H9f"><\/script>',
+        '<script src="./wtg-gold-channel-patch.js?v=0.1H9f"><\/script>',
+        '<script src="./wtg-rugby-display-patch.js?v=0.1H9f"><\/script>'
       ].join('');
       if(/<\/body>/i.test(html))html=html.replace(/<\/body>/i,patches+'</body>');
       else html+=patches;

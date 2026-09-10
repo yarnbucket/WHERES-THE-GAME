@@ -5,6 +5,7 @@ import vm from "node:vm";
 
 const html=fs.readFileSync(new URL("../../app.html",import.meta.url),"utf8");
 const playerInterfacePatch=fs.readFileSync(new URL("../../wtg-player-interface-patch.js",import.meta.url),"utf8");
+const resolveRoute=fs.readFileSync(new URL("../src/routes/resolve.js",import.meta.url),"utf8");
 
 function functionSource(name){
   const start=html.indexOf(`function ${name}(`);
@@ -95,4 +96,11 @@ test("Schedule provides a rolling seven-day LOVE-team view",()=>{
   assert.match(html,/function loadLoveWeek/);
   assert.match(html,/\/resolve\/love-schedule/);
   assert.match(html,/Next 7 Days/);
+});
+
+test("MLB schedule uses official status and TV broadcast enrichment",()=>{
+  assert.match(resolveRoute,/competition\?\.status\?\.type\?\.description/);
+  assert.match(resolveRoute,/statsapi\.mlb\.com\/api\/v1\/schedule/);
+  assert.match(resolveRoute,/function enrichMlbGames/);
+  assert.match(resolveRoute,/item\?\.type === "TV"/);
 });

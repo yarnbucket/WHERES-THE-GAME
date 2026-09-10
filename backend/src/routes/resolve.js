@@ -255,7 +255,7 @@ function normalizeEvent(event, sportLabel, metadata = {}) {
     awayTeamId: awayTeam?.team?.id != null ? String(awayTeam.team.id) : null,
     homeTeamId: homeTeam?.team?.id != null ? String(homeTeam.team.id) : null,
     startTime: event?.date ?? null,
-    status: event?.status?.type?.description ?? null,
+    status: event?.status?.type?.description ?? competition?.status?.type?.description ?? null,
     network: getBroadcast(competition),
     venue: competition?.venue?.fullName ?? null,
     division: metadata.division ?? null,
@@ -305,6 +305,49 @@ async function fetchScoreboard(config, date, groupId = null) {
   const response = await fetch(url, { headers: { accept: "application/json", "user-agent": "WTG/0.1H8n" } });
   if (!response.ok) throw new Error(`ESPN request failed: ${response.status}`);
   return response.json();
+}
+
+function mlbDate(value) {
+  const compact = normalizeDate(value);
+  return `${compact.slice(0, 4)}-${compact.slice(4, 6)}-${compact.slice(6, 8)}`;
+}
+
+async function fetchMlbSchedule(date) {
+  const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=${encodeURIComponent(mlbDate(date))}&hydrate=broadcasts(all)`;
+  const response = await fetch(url, { headers: { accept: "application/json", "user-agent": "WTG/0.1H9f" } });
+  if (!response.ok) throw new Error(`MLB schedule request failed: ${response.status}`);
+  return response.json();
+}
+
+function mlbMatchupKey(away, home) {
+  return `${normalizeRankTeamName(away)}|${normalizeRankTeamName(home)}`;
+}
+
+function enrichMlbGames(games, schedule) {
+  const official = new Map();
+  for (const date of schedule?.dates ?? []) {
+    for (const game of date?.games ?? []) {
+      const broadcasts = uniqueNames((game?.broadcasts ?? [])
+        .filter((item) => item?.type === "TV" && (!item?.language || item.language === "en"))
+        .map((item) => String(item?.name || "").replace(/, presented by .*/i, "").trim()));
+      official.set(mlbMatchupKey(game?.teams?.away?.team?.name, game?.teams?.home?.team?.name), {
+        status: game?.status?.detailedState ?? game?.status?.abstractGameState ?? null,
+        broadcasts
+      });
+    }
+  }
+  return games.map((game) => {
+    const match = official.get(mlbMatchupKey(game.away, game.home));
+    if (!match) return game;
+    const supplementalStreaming = String(game.network || "").split(",")
+      .map((name) => name.trim())
+      .filter((name) => /^(MLB\.TV|ESPN Unlmtd)$/i.test(name));
+    return {
+      ...game,
+      status: match.status ?? game.status,
+      network: uniqueNames([...(match.broadcasts ?? []), ...supplementalStreaming]).join(", ")
+    };
+  });
 }
 
 async function fetchCollegeFootballRankings(date) {
@@ -407,7 +450,14 @@ async function getBaseGames(sportKey, config, date) {
 
   if (sportKey !== "ncaaf") {
     const data = await fetchScoreboard(config, date);
-    return (data.events ?? []).map((event) => normalizeEvent(event, config.label));
+    const games = (data.events ?? []).map((event) => normalizeEvent(event, config.label));
+    if (sportKey !== "mlb") return games;
+    try {
+      return enrichMlbGames(games, await fetchMlbSchedule(date));
+    } catch (error) {
+      console.error("MLB official schedule enrichment error:", error);
+      return games;
+    }
   }
 
   const results = await Promise.all(NCAA_GROUPS.map(async (group) => {
