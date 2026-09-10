@@ -162,7 +162,7 @@ function verifiedFallbacks(date) {
   ];
 }
 
-function dedupe(games) {
+export function dedupeRugbyGames(games) {
   const seen = new Set();
   return games.filter((game) => {
     const teams = [game.away, game.home].map((value) => String(value || "").toLowerCase()).sort().join("|");
@@ -182,26 +182,6 @@ router.get("/", async (req, res, next) => {
   const providerKey = String(req.query.provider || "directv").toLowerCase().trim();
   const fallback = verifiedFallbacks(date);
 
-  // Regression date must always return immediately. This is intentional: it
-  // proves the frontend/backend path independently of ESPN availability.
-  if (date === "20260912") {
-    const games = fallback.map((game) => resolveGame(game, providerKey));
-    console.info(`RUGBY_SMOKE date=${date} count=${games.length} japanUSA=${games.some((g) => g.id === "wtg-rugby-pnc-japan-usa-20260912")} paramount=${games.some((g) => (g.streaming || []).some((s) => s.service === "Paramount+"))}`);
-    return res.json({
-      status: "ok",
-      sport: "rugby",
-      code: "rugby-union",
-      date,
-      provider: providerKey,
-      count: games.length,
-      source: "verified regression fixtures",
-      leagues: [{ id: "256449", label: "Pacific Nations Cup" }, { id: "international", label: "International Rugby Union" }],
-      failedLeagues: [],
-      smoke: { expectedCount: 3, japanUSA: true, paramountPlus: true },
-      games
-    });
-  }
-
   try {
     const results = await Promise.allSettled(
       LEAGUES.map(async (leagueConfig) => {
@@ -212,7 +192,10 @@ router.get("/", async (req, res, next) => {
 
     const feedGames = results.filter((result) => result.status === "fulfilled").flatMap((result) => result.value);
     const failedLeagues = results.map((result, index) => result.status === "rejected" ? LEAGUES[index].id : null).filter(Boolean);
-    const games = dedupe([...feedGames, ...fallback]).map((game) => resolveGame(game, providerKey));
+    // Live feed entries come first so a matching verified fallback is used only
+    // when ESPN did not return that matchup for the requested day.
+    const games = dedupeRugbyGames([...feedGames, ...fallback]).map((game) => resolveGame(game, providerKey));
+    const hasFallbacks = games.some((game) => game.verifiedFallback);
 
     return res.json({
       status: "ok",
@@ -221,9 +204,17 @@ router.get("/", async (req, res, next) => {
       date,
       provider: providerKey,
       count: games.length,
-      source: fallback.length ? "ESPN + verified fallbacks" : "ESPN",
+      source: hasFallbacks ? "ESPN + verified fallbacks" : "ESPN",
       leagues: LEAGUES,
       failedLeagues,
+      smoke: date === "20260912" ? {
+        expectedMinimum: 3,
+        japanUSA: games.some((game) => {
+          const teams = [game.away, game.home].map((team) => String(team || "").toLowerCase());
+          return teams.some((team) => team === "japan") && teams.some((team) => team === "united states of america" || team === "usa");
+        }),
+        paramountPlus: games.some((game) => (game.streaming || []).some((source) => source.service === "Paramount+"))
+      } : undefined,
       games
     });
   } catch (error) {

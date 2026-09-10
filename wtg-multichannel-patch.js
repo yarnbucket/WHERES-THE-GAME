@@ -41,11 +41,13 @@
       add({...item,type:type||"national",directvChannel:item?.channel},200+index);
     });
     options.sort((a,b)=>a._priority-b._priority||a._sourceOrder-b._sourceOrder);
-    const seen=new Set();
+    const seenChannels=new Set();
     return options.filter(item=>{
-      const key=`${item._channel.toLowerCase()}|${item._label.toLowerCase()}`;
-      if(seen.has(key))return false;
-      seen.add(key);return true;
+      // A DIRECTV number identifies the actual tuning destination. Resolver,
+      // provider and guide aliases must not create duplicate pills for it.
+      const key=item._channel.toLowerCase();
+      if(seenChannels.has(key))return false;
+      seenChannels.add(key);return true;
     });
   }
 

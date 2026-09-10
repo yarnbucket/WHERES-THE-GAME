@@ -107,7 +107,10 @@ app.listen(PORT, () => {
       const url = `http://127.0.0.1:${PORT}/resolve?sport=rugby&date=20260912&provider=directv`;
       const response = await fetch(url, { headers: { "user-agent": "WTG-live-smoke/1.0" } });
       const data = await response.json();
-      const japanUsa = (data?.games ?? []).find((game) => game?.id === "wtg-rugby-pnc-japan-usa-20260912");
+      const japanUsa = (data?.games ?? []).find((game) => {
+        const teams = [game?.away, game?.home].map((team) => String(team || "").toLowerCase());
+        return teams.some((team) => team === "japan") && teams.some((team) => team === "united states of america" || team === "usa");
+      });
       const paramount = (japanUsa?.streaming ?? []).some((source) => source?.service === "Paramount+");
       console.info(`RUGBY_LIVE_SMOKE http=${response.status} count=${data?.count ?? -1} japanUSA=${Boolean(japanUsa)} paramount=${paramount}`);
     } catch (error) {
