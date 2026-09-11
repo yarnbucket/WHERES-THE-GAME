@@ -3,6 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#041827" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="WTG" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="./icons/wtg-180.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/wtg-192.png" />
   <title>Where's the Game?</title>
   <!-- WTG 0.1C: all-sports framework + WNBA + Racing + Golf + Tennis + Soccer + MMA + College Baseball + College Softball + Lacrosse + Volleyball + Rugby + Cricket + Other Hockey + Other Basketball + Other Baseball + Olympics + Australian Football + Other Football + Field Hockey + Water Polo + Rugby League live schedule support; full Golf tour coverage; expanded Rugby coverage; expanded Other Basketball coverage; expanded Soccer coverage; expanded Volleyball coverage; complete documented Other Baseball coverage; Olympic Golf added; complete documented Other Football coverage; dedicated NCAAW tab; dedicated College Hockey tab; dedicated College Soccer tab; dedicated College Volleyball tab; Pro Wrestling/WWE + College Wrestling source links; What's On ranked landing tab; completed games hidden globally; VISUALS APPROVED through 0.1F4; 0.1G viewing-source architecture; 0.1G1 mobile card layout; 0.1H provider selection; 0.1H1 Pittsburgh provider mappings; 0.1H2 sports network audit; 0.1H3 stable provider typography; 0.1H4 daily favorites cleanup; 0.1H5 college sports priority; 0.1H6 pro sports priority + NCAA division sorting; 0.1H6a stable Today sorting; 0.1H6b locked What's On order; 0.1H7 branded gold loading meter; 0.1H8 Standard/National/Local viewing modes; 0.1H8a What's On pro-first hierarchy; 0.1H8b What's On TV-only; 0.1H8c NCAA conference team-membership filters; 0.1H8d NCAA filter engine repair; 0.1H8e tap game for Google search; 0.1H8f NCAA metadata source repair; 0.1H8g NCAAF Top 25 direct-rank merge repair -->
   <style>
@@ -945,6 +953,7 @@
 .team-picker-name{display:flex;align-items:center;gap:9px;min-width:0}.team-picker-name img{width:30px;height:30px;object-fit:contain}.team-picker-name strong,.team-picker-name small{display:block}.team-picker-name strong{color:#f5fbff;font-size:13px}.team-picker-name small{color:#91a8ba;font-size:10px;margin-top:2px}.team-choice{display:flex;align-items:center;gap:4px;color:#bcd3e2;font-size:11px;font-weight:900}.team-choice input{width:19px;height:19px;accent-color:#1598e5}.team-choice.hate input{accent-color:#df625a}.team-picker-status{margin:8px 0 0;color:#91a8ba;font-size:11px}
 .settings-fold{border:1px solid rgba(49,93,121,.75);border-radius:14px;background:rgba(4,24,39,.42);margin:9px 0;overflow:hidden}.settings-fold>summary{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:13px;color:#f5fbff;font-size:14px;font-weight:900;cursor:pointer;list-style:none}.settings-fold>summary::-webkit-details-marker{display:none}.settings-fold>summary:after{content:"⌄";color:#70cfff}.settings-fold[open]>summary:after{content:"⌃"}.settings-fold-body{padding:0 12px 12px}.settings-count{color:#91b4c9;font-size:11px;white-space:nowrap}.daily-profile-counts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:8px 0 12px}.daily-count{padding:10px;border:1px solid #315d79;border-radius:11px;background:#061b2a}.daily-count strong,.daily-count span{display:block}.daily-count strong{font-size:18px;color:#f5fbff}.daily-count span{font-size:9px;color:#91a8ba;letter-spacing:.07em;margin-top:2px}
 .schedule-view-toggle{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:10px 0}.schedule-view-toggle button{border:1px solid rgba(73,188,245,.38);border-radius:11px;background:rgba(4,24,39,.78);color:#9fc0d4;padding:10px;font-size:12px;font-weight:950;letter-spacing:.06em}.schedule-view-toggle button.active{background:linear-gradient(90deg,#159de8,#0875c8);color:#03111d;border-color:#71d6ff}.app.week-mode .date-row{display:none}.app.week-mode .date-meta{margin-top:4px}
+.pwa-install{margin-top:10px}.pwa-install button{width:100%;min-height:48px;border:1px solid #4dbcf5;border-radius:12px;background:linear-gradient(90deg,#159de8,#0875c8);color:#fff;font-size:14px;font-weight:950;letter-spacing:.04em}.pwa-install button[hidden]{display:none}.pwa-install-status{margin:9px 2px 0;color:#a9c4d5;font-size:12px;line-height:1.4}
 @media(max-width:640px){
   .profile-toolbar{grid-template-columns:1fr}
   .profile-preference-grid{grid-template-columns:1fr}
@@ -1133,7 +1142,8 @@
     </div>
     <div class="sports-settings" id="sportsSettings"></div>
     </div></details>
-    <p class="settings-foot">0.1H9f verifies MLB game status and TV broadcasts against MLB's official schedule while preserving provider channel resolution.</p>
+    <details class="settings-fold"><summary><span>⬇ INSTALL APP</span><span class="settings-count" id="installSummary">PWA</span></summary><div class="settings-fold-body pwa-install"><p class="settings-copy">Install Where's the Game on this device for a full-screen app experience and faster reopening.</p><button type="button" id="installAppBtn">INSTALL APP</button><p class="pwa-install-status" id="installAppStatus" role="status" aria-live="polite"></p></div></details>
+    <p class="settings-foot">0.1H9g makes Where's the Game installable on supported phones, tablets and computers.</p>
   </section>
 </div>
 
@@ -3517,6 +3527,26 @@ updateDateMeta();
 setInterval(updateDateMeta,1000);
 loadGames();
 hydrateLoveTeamPalettes().then(changed=>{if(changed)loadGames()});
+
+let deferredInstallPrompt=null;
+const installAppBtn=document.getElementById("installAppBtn"),installAppStatus=document.getElementById("installAppStatus"),installSummary=document.getElementById("installSummary");
+const isStandalone=()=>window.matchMedia?.("(display-mode: standalone)").matches||window.navigator.standalone===true;
+function updateInstallUi(){
+  if(isStandalone()){
+    installAppBtn.hidden=true;installSummary.textContent="INSTALLED";installAppStatus.textContent="Where's the Game is installed on this device.";return;
+  }
+  installAppBtn.hidden=false;installSummary.textContent="AVAILABLE";
+  installAppStatus.textContent=/iphone|ipad|ipod/i.test(navigator.userAgent)?"On iPhone or iPad: tap Share, then Add to Home Screen.":"Choose INSTALL APP to add WTG to your home screen.";
+}
+window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();deferredInstallPrompt=event;updateInstallUi()});
+window.addEventListener("appinstalled",()=>{deferredInstallPrompt=null;updateInstallUi()});
+installAppBtn?.addEventListener("click",async()=>{
+  if(deferredInstallPrompt){deferredInstallPrompt.prompt();await deferredInstallPrompt.userChoice;deferredInstallPrompt=null;updateInstallUi();return}
+  if(/iphone|ipad|ipod/i.test(navigator.userAgent)){installAppStatus.textContent="Tap the browser Share button, then choose Add to Home Screen.";return}
+  installAppStatus.textContent="Open this page in Chrome or Edge, then use the browser's Install app option.";
+});
+updateInstallUi();
+if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(error=>console.error("WTG service worker registration failed",error)));
 </script>
 </body>
 </html>

@@ -6,6 +6,9 @@ import vm from "node:vm";
 const html=fs.readFileSync(new URL("../../app.html",import.meta.url),"utf8");
 const playerInterfacePatch=fs.readFileSync(new URL("../../wtg-player-interface-patch.js",import.meta.url),"utf8");
 const resolveRoute=fs.readFileSync(new URL("../src/routes/resolve.js",import.meta.url),"utf8");
+const indexHtml=fs.readFileSync(new URL("../../index.html",import.meta.url),"utf8");
+const manifest=JSON.parse(fs.readFileSync(new URL("../../manifest.webmanifest",import.meta.url),"utf8"));
+const serviceWorker=fs.readFileSync(new URL("../../sw.js",import.meta.url),"utf8");
 
 function functionSource(name){
   const start=html.indexOf(`function ${name}(`);
@@ -103,4 +106,15 @@ test("MLB schedule uses official status and TV broadcast enrichment",()=>{
   assert.match(resolveRoute,/statsapi\.mlb\.com\/api\/v1\/schedule/);
   assert.match(resolveRoute,/function enrichMlbGames/);
   assert.match(resolveRoute,/item\?\.type === "TV"/);
+});
+
+test("WTG exposes an installable PWA shell",()=>{
+  assert.match(indexHtml,/rel="manifest"/);
+  assert.match(html,/id="installAppBtn"/);
+  assert.match(html,/beforeinstallprompt/);
+  assert.match(html,/serviceWorker\.register\("\.\/sw\.js"\)/);
+  assert.equal(manifest.display,"standalone");
+  assert.ok(manifest.icons.some(icon=>icon.sizes==="192x192"));
+  assert.ok(manifest.icons.some(icon=>icon.sizes==="512x512"));
+  assert.match(serviceWorker,/wtg-shell-0\.1H9g/);
 });

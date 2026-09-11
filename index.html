@@ -3,8 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#041827">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="WTG">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icons/wtg-180.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/wtg-192.png">
   <title>Where's the Game?</title>
-  <!-- WTG 0.1H9f modular shell: official MLB status and broadcast enrichment. -->
+  <!-- WTG 0.1H9g installable PWA shell. -->
   <style>
     html,body{margin:0;min-height:100%;background:#020812;color:#d9f4ff;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
     .boot{min-height:100vh;display:grid;place-items:center;text-align:center;padding:24px}
@@ -16,7 +24,7 @@
   <script>
   (async()=>{
     try{
-      const response=await fetch('./app.html?v=0.1H9f',{cache:'no-store'});
+      const response=await fetch('./app.html?v=0.1H9g',{cache:'no-store'});
       if(!response.ok)throw new Error(`App shell HTTP ${response.status}`);
       let html=await response.text();
 
@@ -26,12 +34,12 @@
       );
 
       const patches=[
-        '<script src="./wtg-mlb-streaming-patch.js?v=0.1H9f"><\/script>',
-        '<script src="./wtg-multichannel-patch.js?v=0.1H9f"><\/script>',
-        '<script src="./wtg-player-interface-patch.js?v=0.1H9f"><\/script>',
-        '<script src="./wtg-gender-tags-patch.js?v=0.1H9f"><\/script>',
-        '<script src="./wtg-gold-channel-patch.js?v=0.1H9f"><\/script>',
-        '<script src="./wtg-rugby-display-patch.js?v=0.1H9f"><\/script>'
+        '<script src="./wtg-mlb-streaming-patch.js?v=0.1H9g"><\/script>',
+        '<script src="./wtg-multichannel-patch.js?v=0.1H9g"><\/script>',
+        '<script src="./wtg-player-interface-patch.js?v=0.1H9g"><\/script>',
+        '<script src="./wtg-gender-tags-patch.js?v=0.1H9g"><\/script>',
+        '<script src="./wtg-gold-channel-patch.js?v=0.1H9g"><\/script>',
+        '<script src="./wtg-rugby-display-patch.js?v=0.1H9g"><\/script>'
       ].join('');
       if(/<\/body>/i.test(html))html=html.replace(/<\/body>/i,patches+'</body>');
       else html+=patches;
