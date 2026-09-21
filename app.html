@@ -3231,22 +3231,54 @@ async function loadWhatsOn(){
   }
 
   const results=[];
-  const batchSize=4;
+  const batchSize=6;
   let completed=0;
   let failed=0;
+  let partialRendered=false;
 
-  // 0.1H6a: collect all feed results first.
-  // Do not progressively render partial batches because later batches
-  // can reshuffle the ranked order after the user starts reading it.
-  for(let i=0;i<liveSports.length;i+=batchSize){
-    const batch=liveSports.slice(i,i+batchSize);
+  // Load favorite and high-interest sports first so What's On becomes useful
+  // quickly, while still scanning every enabled sport in the background.
+  const profilePriority=getActiveProfile().favoriteSports||[];
+  const corePriority=["nfl","ncaaf","mlb","nhl","nba","wnba","soccer","golf","tennis","racing"];
+  const priorityIds=[...new Set([...profilePriority,...corePriority])];
+  const priorityIndex=new Map(priorityIds.map((id,index)=>[id,index]));
+  const orderedLiveSports=[...liveSports].sort((a,b)=>{
+    const ai=priorityIndex.has(a.id)?priorityIndex.get(a.id):9999;
+    const bi=priorityIndex.has(b.id)?priorityIndex.get(b.id):9999;
+    return ai-bi || SPORT_CATALOG.indexOf(a)-SPORT_CATALOG.indexOf(b);
+  });
+
+  const buildLoadedGames=()=>{
+    const dedupe=new Map();
+    for(const result of results){
+      for(const game of result.games||[]){
+        const key=`${game._sportKey}|${game.id||game.name||""}|${game.startTime||""}`;
+        if(!dedupe.has(key))dedupe.set(key,game);
+      }
+    }
+    return filterGamesForViewingMode(activeOrFutureGames([...dedupe.values()]));
+  };
+
+  for(let i=0;i<orderedLiveSports.length;i+=batchSize){
+    const batch=orderedLiveSports.slice(i,i+batchSize);
     const batchResults=await Promise.all(batch.map(s=>fetchSportGamesForWhatsOn(s.id,date)));
     if(thisLoad!==whatsOnLoadGeneration)return;
     results.push(...batchResults);
     completed+=batchResults.length;
     failed+=batchResults.filter(r=>r.error).length;
-    setWtgLoadingMeter(completed,liveSports.length);
-    setStatus(`Loading today's games... ${completed}/${liveSports.length}`,true);
+    setWtgLoadingMeter(completed,orderedLiveSports.length);
+
+    const loadedGames=buildLoadedGames();
+    if(loadedGames.length){
+      currentGames=loadedGames;
+      const modePrefix=selectedViewingMode==="standard"?"":`${VIEWING_MODES[selectedViewingMode].label} • `;
+      scheduleTitle.textContent=`${modePrefix}What's On (${currentGames.length})`;
+      renderWhatsOn(currentGames);
+      partialRendered=true;
+      setStatus(`Loading more sports... ${completed}/${orderedLiveSports.length}`,true);
+    }else{
+      setStatus(`Loading today's games... ${completed}/${orderedLiveSports.length}`,true);
+    }
   }
 
   const serverTime=results.map(x=>x.serverTime).find(Boolean);
@@ -3261,7 +3293,7 @@ async function loadWhatsOn(){
   }
 
   if(thisLoad!==whatsOnLoadGeneration)return;
-  setWtgLoadingMeter(liveSports.length,liveSports.length);
+  setWtgLoadingMeter(orderedLiveSports.length,orderedLiveSports.length);
   currentGames=filterGamesForViewingMode(activeOrFutureGames([...dedupe.values()]));
   const modePrefix=selectedViewingMode==="standard"?"":`${VIEWING_MODES[selectedViewingMode].label} • `;
   scheduleTitle.textContent=`${modePrefix}What's On (${currentGames.length})`;
