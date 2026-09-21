@@ -85,6 +85,16 @@ app.use("/resolve", collegeWrestlingRoute);
 app.use("/resolve", rugbyRoute);
 app.use("/resolve", resolveRoute);
 
+// Lightweight readiness endpoint used by the GitHub Pages app to wake the
+// free Render service before fan-out schedule requests begin.
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    service: "wheres-the-game",
+    serverTime: new Date().toISOString()
+  });
+});
+
 // Render is the API host, not a second production frontend. Always send anyone
 // opening the Render URL to the same GitHub Pages UI used for normal testing.
 app.get("/", (req, res) => {
