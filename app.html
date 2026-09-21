@@ -3118,33 +3118,64 @@ function renderWhatsOn(games){
   updateDateMeta();
 }
 
-async function fetchSportGamesForWhatsOn(sportKey,date){
-  const controller=new AbortController();
-  const timeout=setTimeout(()=>controller.abort(),6500);
+const BACKEND_WAKE_TIMEOUT_MS=45000;
+const SPORT_FETCH_TIMEOUT_MS=15000;
+let backendWakePromise=null;
+
+async function wakeBackend(){
+  if(backendWakePromise)return backendWakePromise;
+  backendWakePromise=(async()=>{
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),BACKEND_WAKE_TIMEOUT_MS);
+    try{
+      const response=await fetch(`${API_BASE}/health`,{
+        signal:controller.signal,
+        cache:"no-store"
+      });
+      if(!response.ok)throw new Error(`Health HTTP ${response.status}`);
+      return await response.json();
+    }finally{
+      clearTimeout(timeout);
+    }
+  })();
   try{
-    const response=await fetch(`${API_BASE}/resolve?sport=${sportKey}&date=${date}&provider=directv`,{
-      signal:controller.signal,
-      cache:"no-store"
-    });
-    if(!response.ok)return {games:[],serverTime:null,error:`HTTP ${response.status}`,sportKey};
-    const data=await response.json();
-    return {
-      serverTime:data.serverTime||null,
-      games:(Array.isArray(data.games)?data.games:[]).map(game=>({...game,_sportKey:sportKey})),
-      sportKey
-    };
-  }catch(err){
-    return {
-      games:[],
-      serverTime:null,
-      error:err?.name==="AbortError"?"timeout":(err?.message||"request failed"),
-      sportKey
-    };
+    return await backendWakePromise;
   }finally{
-    clearTimeout(timeout);
+    backendWakePromise=null;
   }
 }
 
+async function fetchSportGamesForWhatsOn(sportKey,date){
+  let lastError="request failed";
+  for(let attempt=0;attempt<2;attempt++){
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),SPORT_FETCH_TIMEOUT_MS);
+    try{
+      const response=await fetch(`${API_BASE}/resolve?sport=${sportKey}&date=${date}&provider=directv`,{
+        signal:controller.signal,
+        cache:"no-store"
+      });
+      if(!response.ok){
+        lastError=`HTTP ${response.status}`;
+        if(attempt===0&&response.status>=500)continue;
+        return {games:[],serverTime:null,error:lastError,sportKey};
+      }
+      const data=await response.json();
+      return {
+        serverTime:data.serverTime||null,
+        games:(Array.isArray(data.games)?data.games:[]).map(game=>({...game,_sportKey:sportKey})),
+        sportKey
+      };
+    }catch(err){
+      lastError=err?.name==="AbortError"?"timeout":(err?.message||"request failed");
+      if(attempt===0)continue;
+      return {games:[],serverTime:null,error:lastError,sportKey};
+    }finally{
+      clearTimeout(timeout);
+    }
+  }
+  return {games:[],serverTime:null,error:lastError,sportKey};
+}
 
 function setWtgLoadingMeter(done,total){
   const title=document.getElementById("wtgLoadingTitle");
@@ -3186,6 +3217,17 @@ async function loadWhatsOn(){
     gamesList.innerHTML=`<div class="whats-empty">No live sports are enabled in Settings.</div>`;
     updateDateMeta();
     return;
+  }
+
+  setStatus("Waking sports server...",true);
+  try{
+    const health=await wakeBackend();
+    if(thisLoad!==whatsOnLoadGeneration)return;
+    if(health?.serverTime)syncServerTime(health.serverTime);
+  }catch(error){
+    if(thisLoad!==whatsOnLoadGeneration)return;
+    console.warn("WTG backend wake check did not complete",error);
+    setStatus("Sports server is responding slowly. Loading available games...",true);
   }
 
   const results=[];
