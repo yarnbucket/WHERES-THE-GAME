@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "backend/**"
+      - ".node-version"
       - "index.html"
       - "app.html"
       - "wtg-*.js"
@@ -24,6 +25,11 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Set up patched Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
 
       - name: Wait for Render and GitHub Pages deploys
         run: sleep 45
